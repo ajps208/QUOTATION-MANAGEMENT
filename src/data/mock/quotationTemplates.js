@@ -1,0 +1,46 @@
+export const mockQuotationTemplates = [
+  {
+    id: 'tpl_1',
+    name: 'Modern',
+    description: 'Clean, modern design with a focus on typography and whitespace.',
+    primaryColor: '#2563eb',
+    headerLayout: 'logo-left',
+    showBusinessInfo: true,
+    showCustomerInfo: true,
+    showDiscounts: true,
+    showTax: true,
+  },
+  {
+    id: 'tpl_2',
+    name: 'Minimal',
+    description: 'Stripped back minimal design for a professional look.',
+    primaryColor: '#0f172a',
+    headerLayout: 'centered',
+    showBusinessInfo: true,
+    showCustomerInfo: true,
+    showDiscounts: false, // Collapse into totals
+    showTax: true,
+  },
+  {
+    id: 'tpl_3',
+    name: 'Corporate',
+    description: 'Traditional corporate layout, detailed table structures.',
+    primaryColor: '#0369a1',
+    headerLayout: 'logo-right',
+    showBusinessInfo: true,
+    showCustomerInfo: true,
+    showDiscounts: true,
+    showTax: true,
+  },
+  {
+    id: 'tpl_4',
+    name: 'Professional',
+    description: 'Balanced layout suitable for all industries.',
+    primaryColor: '#4f46e5',
+    headerLayout: 'logo-left',
+    showBusinessInfo: true,
+    showCustomerInfo: true,
+    showDiscounts: true,
+    showTax: true,
+  }
+];

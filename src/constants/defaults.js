@@ -1,0 +1,10 @@
+export const DEFAULTS = {
+  CURRENCY: 'INR',
+  TAX_PERCENTAGE: 18,
+  QUOTATION_VALIDITY_DAYS: 30,
+  PAGINATION: {
+    PAGE_SIZE: 10,
+    PAGE_SIZE_OPTIONS: [10, 25, 50, 100],
+  },
+  DATE_FORMAT: 'dd/MM/yyyy',
+};
