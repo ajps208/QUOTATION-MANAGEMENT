@@ -97,7 +97,6 @@ function QuotationBuilderInner() {
         if (requestId) {
           const req = await quotationRequestService.getRequestById(requestId);
           setSourceRequest(req);
-          setCustomerId(req.customerId);
           setCustomerNotes(req.generalNote || '');
 
           const prefilledItems = req.items.map((ri) => {
