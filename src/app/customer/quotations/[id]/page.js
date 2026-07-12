@@ -126,19 +126,19 @@ export default function CustomerQuotationDetailPage({ params }) {
       </Box>
 
       <Grid container spacing={4}>
-        <Grid item xs={12} lg={8}>
+        <Grid xs={12} lg={8}>
           {/* Vendor & Customer Info */}
           <Card sx={{ borderRadius: 3, mb: 3 }}>
             <CardContent sx={{ p: 3 }}>
               <Grid container spacing={4}>
-                <Grid item xs={12} sm={6}>
+                <Grid xs={12} sm={6}>
                   <Typography variant="subtitle2" fontWeight={700} color="text.secondary" mb={1}>FROM (VENDOR)</Typography>
                   <Typography variant="body1" fontWeight={700}>{business?.name}</Typography>
                   <Typography variant="body2" color="text.secondary">{business?.email}</Typography>
                   <Typography variant="body2" color="text.secondary">{business?.phone}</Typography>
                   <Typography variant="body2" color="text.secondary">{business?.city}, {business?.country}</Typography>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid xs={12} sm={6}>
                   <Typography variant="subtitle2" fontWeight={700} color="text.secondary" mb={1}>TO</Typography>
                   <Typography variant="body1" fontWeight={700}>{user?.name}</Typography>
                   <Typography variant="body2" color="text.secondary">{user?.company}</Typography>
@@ -224,7 +224,7 @@ export default function CustomerQuotationDetailPage({ params }) {
         </Grid>
 
         {/* Right: Totals */}
-        <Grid item xs={12} lg={4}>
+        <Grid xs={12} lg={4}>
           <Card sx={{ borderRadius: 3, position: 'sticky', top: 80 }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" fontWeight={600} mb={3}>Price Breakdown</Typography>

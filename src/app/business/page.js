@@ -189,9 +189,9 @@ export default function BusinessDashboard() {
                         </Typography>
                       }
                       secondary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
                           <AccessTimeIcon sx={{ fontSize: 12, color: 'text.disabled' }} />
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography component="span" variant="caption" color="text.secondary">
                             {activity.time}
                           </Typography>
                         </Box>

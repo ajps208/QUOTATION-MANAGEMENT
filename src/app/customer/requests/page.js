@@ -65,7 +65,7 @@ export default function CustomerRequestsPage() {
           {requests.map((req) => {
             const vendor = businesses[req.businessId];
             return (
-              <Grid item xs={12} key={req.id}>
+              <Grid xs={12} key={req.id}>
                 <Card sx={{ borderRadius: 3 }}>
                   <CardContent sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
@@ -89,6 +89,12 @@ export default function CustomerRequestsPage() {
                         <StatusChip status={req.status} />
                       </Box>
                     </Box>
+                    {req.status === 'Rejected' && req.rejectionReason && (
+                      <Box sx={{ mt: 2, p: 2, bgcolor: 'error.50', borderRadius: 1, border: '1px solid', borderColor: 'error.200' }}>
+                        <Typography variant="subtitle2" color="error.800" fontWeight={600} mb={0.5}>Reason for Rejection:</Typography>
+                        <Typography variant="body2" color="error.900">{req.rejectionReason}</Typography>
+                      </Box>
+                    )}
                   </CardContent>
                 </Card>
               </Grid>

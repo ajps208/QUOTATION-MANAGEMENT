@@ -8,6 +8,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
 import CancelIcon from '@mui/icons-material/Cancel';
 import PrintIcon from '@mui/icons-material/Print';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
 
 import { quotationService } from '@/services/quotationService';
 import { customerService } from '@/services/customerService';
@@ -79,6 +80,23 @@ export default function QuotationDetailPage({ params }) {
     window.print();
   };
 
+  const handleWhatsApp = () => {
+    if (!customer?.phone) {
+      showError('Customer has no phone number on record.');
+      return;
+    }
+    
+    // Create a public link (assuming frontend runs on window.location.origin)
+    // Note: The customer sees it on their end via their own routes.
+    // So we just send a generic message or a link to login.
+    const message = `Hello ${customer.name}, your quotation ${quotation.quotationNumber} from ${business.name} is ready.`;
+    const encodedMessage = encodeURIComponent(message);
+    const url = `https://wa.me/${customer.phone}?text=${encodedMessage}`;
+    
+    // Open in new tab
+    window.open(url, '_blank');
+  };
+
   if (loading) return <Typography sx={{ mt: 4 }}>Loading quotation...</Typography>;
   if (!quotation || !business || !customer || !settings) return null;
 
@@ -115,6 +133,15 @@ export default function QuotationDetailPage({ params }) {
             Send to Customer
           </Button>
         )}
+        <Button
+          variant="outlined"
+          color="success"
+          startIcon={<WhatsAppIcon />}
+          onClick={handleWhatsApp}
+          size="small"
+        >
+          WhatsApp
+        </Button>
         {canCancel && quotation.status !== QUOTATION_STATUS.DRAFT && (
           <Button
             variant="outlined"

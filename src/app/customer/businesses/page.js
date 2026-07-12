@@ -40,7 +40,7 @@ export default function BusinessesPage() {
           items.length === 0 ? <EmptyState title="No businesses found" description="Active businesses will appear here for your browsing and requesting flow." /> : (
             <Grid container spacing={2}>
               {items.map((item) => (
-                <Grid item xs={12} md={6} key={item.id}>
+                <Grid xs={12} md={6} key={item.id}>
                   <Card>
                     <CardContent>
                       <Stack spacing={1.5}>

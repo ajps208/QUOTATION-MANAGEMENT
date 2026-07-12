@@ -1,46 +1,45 @@
-import { mockCustomers } from '@/data/mock';
-import { generateId } from '@/utils/helpers';
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-let customers = [...mockCustomers];
-
 export const customerService = {
   async getCustomers(businessId) {
-    await delay(300);
-    return customers.filter(c => c.businessId === businessId);
+    const url = businessId ? `/api/customers?businessId=${businessId}` : '/api/customers';
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch customers');
+    return data;
   },
 
   async getCustomerById(id) {
-    await delay(300);
-    const customer = customers.find(c => c.id === id);
-    if (!customer) throw new Error('Customer not found');
-    return { ...customer };
+    const res = await fetch(`/api/customers/${id}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Customer not found');
+    return data;
   },
 
-  async createCustomer(data) {
-    await delay(400);
-    const newCustomer = {
-      id: generateId(),
-      ...data,
-      status: 'Active',
-      createdAt: new Date().toISOString(),
-    };
-    customers.push(newCustomer);
-    return { ...newCustomer };
+  async createCustomer(payload) {
+    const res = await fetch('/api/customers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to create customer');
+    return data;
   },
 
   async updateCustomer(id, updates) {
-    await delay(400);
-    const index = customers.findIndex(c => c.id === id);
-    if (index === -1) throw new Error('Customer not found');
-    
-    customers[index] = { ...customers[index], ...updates };
-    return { ...customers[index] };
+    const res = await fetch(`/api/customers/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update customer');
+    return data;
   },
 
   async deleteCustomer(id) {
-    await delay(400);
-    customers = customers.filter(c => c.id !== id);
-    return { success: true };
-  }
+    const res = await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to delete customer');
+    return data;
+  },
 };

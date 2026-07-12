@@ -40,7 +40,7 @@ export default function QuotationRequestsPage() {
           items.length === 0 ? <EmptyState title="No requests yet" description="Incoming customer requests will appear here once submitted." /> : (
             <Grid container spacing={2}>
               {items.map((item) => (
-                <Grid item xs={12} md={6} key={item.id}>
+                <Grid xs={12} md={6} key={item.id}>
                   <Card>
                     <CardContent>
                       <Stack spacing={1.5}>

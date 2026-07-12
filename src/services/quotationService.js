@@ -1,94 +1,59 @@
-import { mockQuotations } from '@/data/mock';
-import { generateId, generateQuotationNumber } from '@/utils/helpers';
-import { QUOTATION_STATUS } from '@/constants/statuses';
-import { calculateQuotationTotals } from '@/utils/quotationCalculations';
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-let quotations = [...mockQuotations];
-
 export const quotationService = {
-  async getQuotationsByBusiness(businessId) {
-    await delay(300);
-    return quotations.filter(q => q.businessId === businessId);
-  },
-
-  async getQuotationsByCustomer(customerId) {
-    await delay(300);
-    return quotations.filter(q => q.customerId === customerId);
+  async getQuotations(businessId, customerId) {
+    const params = new URLSearchParams();
+    if (businessId) params.set('businessId', businessId);
+    if (customerId) params.set('customerId', customerId);
+    const res = await fetch(`/api/quotations?${params}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch quotations');
+    return data;
   },
 
   async getQuotationById(id) {
-    await delay(300);
-    const quot = quotations.find(q => q.id === id);
-    if (!quot) throw new Error('Quotation not found');
-    return { ...quot };
+    const res = await fetch(`/api/quotations/${id}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Quotation not found');
+    return data;
   },
 
-  async createQuotation(data) {
-    await delay(500);
-    // Auto calculate totals if not provided
-    const totals = calculateQuotationTotals(data);
-    
-    const newQuot = {
-      id: generateId(),
-      quotationNumber: generateQuotationNumber(data.prefix || 'QT', quotations.length + 1),
-      ...data,
-      ...totals,
-      status: QUOTATION_STATUS.DRAFT,
-      revision: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    quotations.push(newQuot);
-    return { ...newQuot };
+  async createQuotation(payload) {
+    const res = await fetch('/api/quotations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to create quotation');
+    return data;
   },
 
   async updateQuotation(id, updates) {
-    await delay(400);
-    const index = quotations.findIndex(q => q.id === id);
-    if (index === -1) throw new Error('Quotation not found');
-    
-    const merged = { ...quotations[index], ...updates };
-    // Recalculate totals
-    const totals = calculateQuotationTotals(merged);
-    
-    quotations[index] = { 
-      ...merged, 
-      ...totals,
-      updatedAt: new Date().toISOString() 
-    };
-    return { ...quotations[index] };
+    const res = await fetch(`/api/quotations/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update quotation');
+    return data;
+  },
+
+  async deleteQuotation(id) {
+    const res = await fetch(`/api/quotations/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to delete quotation');
+    return data;
   },
 
   async updateQuotationStatus(id, status) {
-    await delay(300);
-    const index = quotations.findIndex(q => q.id === id);
-    if (index === -1) throw new Error('Quotation not found');
-    
-    quotations[index] = { ...quotations[index], status, updatedAt: new Date().toISOString() };
-    return { ...quotations[index] };
+    return this.updateQuotation(id, { status });
   },
 
-  async createRevision(id, updates) {
-    await delay(500);
-    const index = quotations.findIndex(q => q.id === id);
-    if (index === -1) throw new Error('Quotation not found');
-    
-    const baseQuot = quotations[index];
-    const newQuot = {
-      ...baseQuot,
-      ...updates,
-      id: generateId(),
-      revision: baseQuot.revision + 1,
-      status: QUOTATION_STATUS.REVISED,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    const totals = calculateQuotationTotals(newQuot);
-    const finalQuot = { ...newQuot, ...totals };
-    
-    quotations.push(finalQuot);
-    return { ...finalQuot };
-  }
+  async getQuotationsByBusiness(businessId) {
+    return this.getQuotations(businessId, null);
+  },
+
+  async getQuotationsByCustomer(customerId) {
+    return this.getQuotations(null, customerId);
+  },
 };

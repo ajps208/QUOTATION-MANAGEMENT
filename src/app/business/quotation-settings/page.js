@@ -29,7 +29,6 @@ import { businessService } from "@/services/businessService";
 import { quotationSettingsService } from "@/services/quotationSettingsService";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import QuotationDocument from "@/components/quotation/QuotationDocument";
-import { mockQuotations, mockCustomers } from "@/data/mock";
 
 // A4 = 794px wide. We scale it to fit the preview container
 const PREVIEW_WIDTH = 450;
@@ -37,11 +36,30 @@ const A4_WIDTH = 794;
 const PREVIEW_SCALE = PREVIEW_WIDTH / A4_WIDTH;
 const PREVIEW_HEIGHT = Math.round(1123 * PREVIEW_SCALE);
 
+// Static sample data for the live design preview
 const SAMPLE_QUOTATION = {
-  ...mockQuotations[0],
-  quotationNumber: "PREVIEW-001",
+  quotationNumber: 'PREVIEW-001',
+  quotationDate: new Date().toISOString(),
+  expiryDate: new Date(Date.now() + 30 * 86400000).toISOString(),
+  items: [
+    { name: 'Web Design Package', quantity: 1, unitPrice: 45000, discountType: 'NONE', discountValue: 0, taxPercent: 18 },
+    { name: 'SEO Optimization', quantity: 3, unitPrice: 8000, discountType: 'NONE', discountValue: 0, taxPercent: 18 },
+  ],
+  overallDiscount: { type: 'NONE', value: 0 },
+  specialDiscounts: [],
+  additionalCharges: [],
+  paymentTerms: '50% advance, balance on delivery',
+  terms: 'Valid for 30 days.',
+  customerNotes: 'Looking forward to working with you.',
+  businessNotes: '',
 };
-const SAMPLE_CUSTOMER = mockCustomers[0];
+const SAMPLE_CUSTOMER = {
+  name: 'Rohan Mehta',
+  companyName: 'TechVision Pvt Ltd',
+  email: 'rohan@techvision.example.com',
+  phone: '+91 9876543210',
+  billingAddress: '12, Business Hub, Andheri East, Mumbai - 400069',
+};
 
 const FONTS = [
   { value: "Inter, sans-serif", label: "Inter (Modern Sans)" },
@@ -89,7 +107,7 @@ export default function QuotationSettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const saved = await quotationSettingsService.saveSettings(
+      const saved = await quotationSettingsService.updateSettings(
         user.businessId,
         settings,
       );

@@ -142,7 +142,7 @@ export default function VendorDetailsPage({ params }) {
       ) : (
         <Grid container spacing={3}>
           {filteredProducts.map((product) => (
-            <Grid item xs={12} md={6} lg={4} key={product.id}>
+            <Grid xs={12} md={6} lg={4} key={product.id}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 3 }}>
                 <CardContent sx={{ flexGrow: 1, p: 3 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>

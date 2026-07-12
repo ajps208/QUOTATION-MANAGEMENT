@@ -52,8 +52,8 @@ export default function RegisterPage() {
             </Box>
             <Typography color="text.secondary">Set up a business or customer workspace for your quotation flow.</Typography>
             {error ? <Alert severity="error">{error}</Alert> : null}
-            <form onSubmit={handleSubmit}>
-              <Stack spacing={3} sx={{ mt: 2 }}>
+            <form onSubmit={handleSubmit} suppressHydrationWarning>
+              <Stack spacing={3} sx={{ mt: 2 }} suppressHydrationWarning>
                 <TextField label="Full name" name="name" value={form.name} onChange={handleChange} required />
                 <TextField label="Email" name="email" type="email" value={form.email} onChange={handleChange} required />
                 <TextField label="Phone" name="phone" value={form.phone} onChange={handleChange} required />

@@ -1,18 +1,26 @@
 'use client';
 import {
   Box, Typography, Chip, Button, Divider, List,
-  ListItem, ListItemText
+  ListItem, ListItemText, TextField
 } from '@mui/material';
 import AppDialog from '@/components/common/AppDialog';
 import StatusChip from '@/components/common/StatusChip';
 import { formatDate } from '@/utils/formatters';
 import { REQUEST_STATUS } from '@/constants/statuses';
+import { useState } from 'react';
 
-export default function RequestDetailDialog({ open, onClose, request, customer, onStatusUpdate }) {
+export default function RequestDetailDialog({ open, onClose, request, onStatusUpdate }) {
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
   const actions = (
     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-      <Button onClick={onClose} color="inherit">Close</Button>
-      {request.status === REQUEST_STATUS.SUBMITTED && (
+      <Button onClick={() => {
+        if (rejecting) setRejecting(false);
+        else onClose();
+      }} color="inherit">
+        {rejecting ? 'Cancel Rejection' : 'Close'}
+      </Button>
+      {!rejecting && request.status === REQUEST_STATUS.SUBMITTED && (
         <Button
           variant="outlined"
           color="warning"
@@ -21,23 +29,31 @@ export default function RequestDetailDialog({ open, onClose, request, customer, 
           Mark Under Review
         </Button>
       )}
-      {request.status === REQUEST_STATUS.UNDER_REVIEW && (
+      {!rejecting && request.status === REQUEST_STATUS.UNDER_REVIEW && (
         <>
           <Button
             variant="outlined"
             color="error"
-            onClick={() => onStatusUpdate(REQUEST_STATUS.REJECTED)}
+            onClick={() => setRejecting(true)}
           >
             Reject
           </Button>
-          <Button
-            variant="contained"
-            color="success"
-            onClick={() => onStatusUpdate(REQUEST_STATUS.APPROVED)}
-          >
-            Approve
-          </Button>
+          {/* Approve button removed as approval happens on quotation creation */}
         </>
+      )}
+      {rejecting && (
+        <Button
+          variant="contained"
+          color="error"
+          onClick={() => {
+            if (rejectionReason.trim()) {
+              onStatusUpdate(REQUEST_STATUS.REJECTED, rejectionReason);
+            }
+          }}
+          disabled={!rejectionReason.trim()}
+        >
+          Confirm Rejection
+        </Button>
       )}
     </Box>
   );
@@ -62,12 +78,12 @@ export default function RequestDetailDialog({ open, onClose, request, customer, 
         <Divider />
 
         {/* Customer Info */}
-        {customer && (
+        {request.customerInfo && (
           <Box>
             <Typography variant="subtitle2" fontWeight={600} mb={1} color="text.secondary">CUSTOMER</Typography>
-            <Typography variant="body1" fontWeight={600}>{customer.name}</Typography>
-            <Typography variant="body2" color="text.secondary">{customer.companyName}</Typography>
-            <Typography variant="body2" color="text.secondary">{customer.email} • {customer.phone}</Typography>
+            <Typography variant="body1" fontWeight={600}>{request.customerInfo.name}</Typography>
+            {request.customerInfo.company && <Typography variant="body2" color="text.secondary">{request.customerInfo.company}</Typography>}
+            <Typography variant="body2" color="text.secondary">{request.customerInfo.email} • {request.customerInfo.phone}</Typography>
           </Box>
         )}
 
@@ -95,6 +111,27 @@ export default function RequestDetailDialog({ open, onClose, request, customer, 
             <Box>
               <Typography variant="subtitle2" fontWeight={600} mb={1} color="text.secondary">CUSTOMER NOTE</Typography>
               <Typography variant="body2">{request.generalNote}</Typography>
+            </Box>
+          </>
+        )}
+
+        {/* Rejection Form */}
+        {rejecting && (
+          <>
+            <Divider sx={{ borderColor: 'error.main', opacity: 0.2 }} />
+            <Box>
+              <Typography variant="subtitle2" fontWeight={600} mb={1} color="error.main">REJECTION REASON (Sent to customer)</Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                placeholder="Please provide a reason for rejecting this request..."
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                variant="outlined"
+                color="error"
+                autoFocus
+              />
             </Box>
           </>
         )}

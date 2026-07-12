@@ -1,39 +1,34 @@
-import { mockNotifications } from '@/data/mock';
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-let notifications = [...mockNotifications];
-
 export const notificationService = {
   async getNotifications(userId) {
-    await delay(300);
-    return notifications.filter(n => n.userId === userId).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const res = await fetch(`/api/notifications?userId=${userId}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch notifications');
+    return data;
   },
 
-  async getUnreadCount(userId) {
-    await delay(200);
-    return notifications.filter(n => n.userId === userId && !n.read).length;
-  },
-
-  async markAsRead(id) {
-    await delay(200);
-    const index = notifications.findIndex(n => n.id === id);
-    if (index !== -1) {
-      notifications[index] = { ...notifications[index], read: true };
-    }
-    return { success: true };
+  async markAsRead(notificationId) {
+    const res = await fetch(`/api/notifications/${notificationId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to mark as read');
+    return data;
   },
 
   async markAllAsRead(userId) {
-    await delay(300);
-    notifications = notifications.map(n => 
-      n.userId === userId ? { ...n, read: true } : n
-    );
-    return { success: true };
+    const res = await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ markAllRead: true, userId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to mark all as read');
+    return data;
   },
 
-  async deleteNotification(id) {
-    await delay(300);
-    notifications = notifications.filter(n => n.id !== id);
-    return { success: true };
-  }
+  async getUnreadCount(userId) {
+    const notifications = await this.getNotifications(userId);
+    return notifications.filter(n => !n.read).length;
+  },
 };

@@ -1,6 +1,8 @@
-export const mockQuotationTemplates = [
+import connectToDatabase from '@/lib/mongodb';
+import QuotationTemplate from '@/models/QuotationTemplate';
+
+const SEED_TEMPLATES = [
   {
-    id: 'tpl_1',
     name: 'Modern',
     description: 'Clean, modern design with a focus on typography and whitespace.',
     primaryColor: '#2563eb',
@@ -11,18 +13,16 @@ export const mockQuotationTemplates = [
     showTax: true,
   },
   {
-    id: 'tpl_2',
     name: 'Minimal',
     description: 'Stripped back minimal design for a professional look.',
     primaryColor: '#0f172a',
     headerLayout: 'centered',
     showBusinessInfo: true,
     showCustomerInfo: true,
-    showDiscounts: false, // Collapse into totals
+    showDiscounts: false,
     showTax: true,
   },
   {
-    id: 'tpl_3',
     name: 'Corporate',
     description: 'Traditional corporate layout, detailed table structures.',
     primaryColor: '#0369a1',
@@ -33,7 +33,6 @@ export const mockQuotationTemplates = [
     showTax: true,
   },
   {
-    id: 'tpl_4',
     name: 'Professional',
     description: 'Balanced layout suitable for all industries.',
     primaryColor: '#4f46e5',
@@ -42,5 +41,31 @@ export const mockQuotationTemplates = [
     showCustomerInfo: true,
     showDiscounts: true,
     showTax: true,
-  }
+  },
 ];
+
+function serialize(doc) {
+  const obj = doc.toObject ? doc.toObject() : doc;
+  obj.id = obj._id.toString();
+  delete obj._id;
+  delete obj.__v;
+  return obj;
+}
+
+// GET /api/templates
+export async function GET() {
+  try {
+    await connectToDatabase();
+    let templates = await QuotationTemplate.find().sort({ createdAt: 1 });
+
+    // Seed if empty
+    if (templates.length === 0) {
+      await QuotationTemplate.insertMany(SEED_TEMPLATES);
+      templates = await QuotationTemplate.find().sort({ createdAt: 1 });
+    }
+
+    return Response.json(templates.map(serialize));
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: 500 });
+  }
+}

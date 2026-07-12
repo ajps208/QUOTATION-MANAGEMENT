@@ -1,18 +1,8 @@
-import { mockQuotationTemplates } from '@/data/mock';
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-let templates = [...mockQuotationTemplates];
-
 export const templateService = {
   async getTemplates() {
-    await delay(200);
-    return [...templates];
+    const res = await fetch('/api/templates');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch templates');
+    return data;
   },
-
-  async getTemplateById(id) {
-    await delay(200);
-    const template = templates.find(t => t.id === id);
-    if (!template) throw new Error('Template not found');
-    return { ...template };
-  }
 };

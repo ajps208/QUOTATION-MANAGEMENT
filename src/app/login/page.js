@@ -54,8 +54,8 @@ export default function LoginPage() {
             </Box>
             <Typography color="text.secondary">Access your quotation workspace with mock authentication enabled.</Typography>
             {error ? <Alert severity="error">{error}</Alert> : null}
-            <form onSubmit={handleSubmit}>
-              <Stack spacing={3} sx={{ mt: 2 }}>
+            <form onSubmit={handleSubmit} suppressHydrationWarning>
+              <Stack spacing={3} sx={{ mt: 2 }} suppressHydrationWarning>
                 <TextField label="Email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
                 <TextField label="Password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
                 <Button type="submit" variant="contained" size="large" disabled={loading} sx={{ mt: 2 }}>

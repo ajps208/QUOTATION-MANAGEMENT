@@ -1,52 +1,45 @@
-import { mockCategories } from '@/data/mock';
-import { generateId } from '@/utils/helpers';
-import { CATEGORY_STATUS } from '@/constants/statuses';
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-let categories = [...mockCategories];
-
 export const categoryService = {
   async getCategories(businessId) {
-    await delay(300);
-    return categories.filter(c => c.businessId === businessId);
+    const url = businessId ? `/api/categories?businessId=${businessId}` : '/api/categories';
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch categories');
+    return data;
   },
 
   async getCategoryById(id) {
-    await delay(300);
-    const category = categories.find(c => c.id === id);
-    if (!category) throw new Error('Category not found');
-    return { ...category };
+    const res = await fetch(`/api/categories/${id}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Category not found');
+    return data;
   },
 
-  async createCategory(data) {
-    await delay(400);
-    const newCategory = {
-      id: generateId(),
-      ...data,
-      status: CATEGORY_STATUS.ACTIVE,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    categories.push(newCategory);
-    return { ...newCategory };
+  async createCategory(payload) {
+    const res = await fetch('/api/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to create category');
+    return data;
   },
 
   async updateCategory(id, updates) {
-    await delay(400);
-    const index = categories.findIndex(c => c.id === id);
-    if (index === -1) throw new Error('Category not found');
-    
-    categories[index] = { 
-      ...categories[index], 
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-    return { ...categories[index] };
+    const res = await fetch(`/api/categories/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update category');
+    return data;
   },
 
   async deleteCategory(id) {
-    await delay(400);
-    categories = categories.filter(c => c.id !== id);
-    return { success: true };
-  }
+    const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to delete category');
+    return data;
+  },
 };

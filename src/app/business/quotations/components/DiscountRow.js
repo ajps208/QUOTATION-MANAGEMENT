@@ -11,7 +11,7 @@ export default function DiscountRow({ discount, index, label = 'Discount', onUpd
   return (
     <Box sx={{ mb: 2 }}>
       <Grid container spacing={3} alignItems="center">
-        <Grid item xs={12} sm={4}>
+        <Grid xs={12} sm={4}>
           <TextField
             label={`${label} Name`}
             fullWidth
@@ -20,7 +20,7 @@ export default function DiscountRow({ discount, index, label = 'Discount', onUpd
             placeholder="e.g., Loyalty Discount"
           />
         </Grid>
-        <Grid item xs={12} sm={3}>
+        <Grid xs={12} sm={3}>
           <FormControl fullWidth>
             <InputLabel>Type</InputLabel>
             <Select
@@ -33,7 +33,7 @@ export default function DiscountRow({ discount, index, label = 'Discount', onUpd
             </Select>
           </FormControl>
         </Grid>
-        <Grid item xs={10} sm={4}>
+        <Grid xs={10} sm={4}>
           <TextField
             label="Value"
             type="number"
@@ -49,7 +49,7 @@ export default function DiscountRow({ discount, index, label = 'Discount', onUpd
             }}
           />
         </Grid>
-        <Grid item xs={2} sm={1}>
+        <Grid xs={2} sm={1}>
           <IconButton color="error" onClick={() => onRemove(index)}>
             <DeleteIcon />
           </IconButton>

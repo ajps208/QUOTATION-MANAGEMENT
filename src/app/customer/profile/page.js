@@ -54,7 +54,7 @@ export default function CustomerProfilePage() {
       />
 
       <Grid container spacing={4}>
-        <Grid item xs={12} md={4}>
+        <Grid xs={12} md={4}>
           <Card sx={{ borderRadius: 3, textAlign: 'center' }}>
             <CardContent sx={{ p: 4 }}>
               <Avatar 
@@ -69,14 +69,14 @@ export default function CustomerProfilePage() {
           </Card>
         </Grid>
         
-        <Grid item xs={12} md={8}>
+        <Grid xs={12} md={8}>
           <Card sx={{ borderRadius: 3 }}>
             <CardContent sx={{ p: 4 }}>
               <Typography variant="h6" fontWeight={600} mb={3}>Edit Profile</Typography>
               
               <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
+                  <Grid xs={12} sm={6}>
                     <TextField 
                       label="Full Name" 
                       value={formData.name} 
@@ -85,7 +85,7 @@ export default function CustomerProfilePage() {
                       fullWidth 
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid xs={12} sm={6}>
                     <TextField 
                       label="Email Address" 
                       type="email" 
@@ -94,7 +94,7 @@ export default function CustomerProfilePage() {
                       fullWidth 
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid xs={12} sm={6}>
                     <TextField 
                       label="Phone Number" 
                       value={formData.phone} 
@@ -102,7 +102,7 @@ export default function CustomerProfilePage() {
                       fullWidth 
                     />
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid xs={12} sm={6}>
                     <TextField 
                       label="Company Name" 
                       value={formData.company} 
@@ -110,7 +110,7 @@ export default function CustomerProfilePage() {
                       fullWidth 
                     />
                   </Grid>
-                  <Grid item xs={12}>
+                  <Grid xs={12}>
                     <TextField 
                       label="Bio / Description" 
                       value={formData.bio} 

@@ -117,7 +117,7 @@ export default function CartPage() {
 
       <Grid container spacing={4}>
         {/* Cart Items */}
-        <Grid item xs={12} md={8}>
+        <Grid xs={12} md={8}>
           <Card sx={{ borderRadius: 3 }}>
             <CardContent sx={{ p: 0 }}>
               {cartStore.items.map((item, index) => (
@@ -162,7 +162,7 @@ export default function CartPage() {
         </Grid>
 
         {/* Summary & Submit */}
-        <Grid item xs={12} md={4}>
+        <Grid xs={12} md={4}>
           <Card sx={{ borderRadius: 3, position: 'sticky', top: 80 }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" fontWeight={600} mb={2}>Request Summary</Typography>

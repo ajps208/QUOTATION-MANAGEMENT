@@ -59,7 +59,8 @@ function QuotationBuilderInner() {
   const [sourceRequest, setSourceRequest] = useState(null);
 
   // Form state
-  const [customerId, setCustomerId] = useState('');
+  const resolvedCustomerIdParam = searchParams.get('customerId');
+  const [customerId, setCustomerId] = useState(resolvedCustomerIdParam || '');
   const [quotationDate, setQuotationDate] = useState(new Date().toISOString().split('T')[0]);
   const [expiryDate, setExpiryDate] = useState(() => {
     const d = new Date();
@@ -105,7 +106,7 @@ function QuotationBuilderInner() {
               productId: ri.productId,
               name: ri.name,
               quantity: ri.quantity,
-              unitPrice: prod?.basePrice || 0,
+              unitPrice: prod?.unitPrice || 0,
               taxPercent: prod?.taxPercent || 18,
               unit: prod?.unit || 'Item',
               discountType: DISCOUNT_TYPE.NONE,
@@ -114,6 +115,10 @@ function QuotationBuilderInner() {
           });
           setItems(prefilledItems.length > 0 ? prefilledItems : [emptyItem()]);
           setPaymentTerms(biz.paymentTerms || '');
+          
+          if (resolvedCustomerIdParam) {
+            setCustomerId(resolvedCustomerIdParam);
+          }
         }
       } catch (err) {
         showError('Failed to load data for quotation builder');
@@ -225,18 +230,27 @@ function QuotationBuilderInner() {
               <Divider sx={{ mb: 4 }} />
               <Grid container spacing={4}>
                 <Grid xs={12}>
-                  <FormControl fullWidth required>
-                    <InputLabel>Customer</InputLabel>
-                    <Select
-                      value={customerId}
-                      label="Customer"
-                      onChange={(e) => setCustomerId(e.target.value)}
-                    >
-                      {customers.map(c => (
-                        <MenuItem key={c.id} value={c.id}>{c.name} ({c.companyName})</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  {requestId && customerId ? (
+                    <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                      <Typography variant="caption" color="text.secondary" display="block">Customer (Locked to Request)</Typography>
+                      <Typography variant="body1" fontWeight={600}>
+                        {customers.find(c => c.id === customerId)?.name || 'Loading...'}
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <FormControl fullWidth required>
+                      <InputLabel>Customer</InputLabel>
+                      <Select
+                        value={customerId}
+                        label="Customer"
+                        onChange={(e) => setCustomerId(e.target.value)}
+                      >
+                        {customers.map(c => (
+                          <MenuItem key={c.id} value={c.id}>{c.name} ({c.companyName})</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  )}
                 </Grid>
                 <Grid xs={12} sm={6}>
                   <TextField

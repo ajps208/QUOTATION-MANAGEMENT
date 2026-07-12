@@ -16,8 +16,31 @@ import { templateService } from '@/services/templateService';
 import { quotationSettingsService } from '@/services/quotationSettingsService';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import QuotationDocument from '@/components/quotation/QuotationDocument';
-import { mockQuotations } from '@/data/mock';
-import { mockCustomers } from '@/data/mock';
+
+// Static sample data for template preview (no real data needed for visual preview)
+const SAMPLE_QUOTATION = {
+  quotationNumber: 'PREVIEW-001',
+  quotationDate: new Date().toISOString(),
+  expiryDate: new Date(Date.now() + 30 * 86400000).toISOString(),
+  items: [
+    { name: 'Web Design Package', quantity: 1, unitPrice: 45000, discountType: 'NONE', discountValue: 0, taxPercent: 18 },
+    { name: 'SEO Optimization', quantity: 3, unitPrice: 8000, discountType: 'NONE', discountValue: 0, taxPercent: 18 },
+  ],
+  overallDiscount: { type: 'NONE', value: 0 },
+  specialDiscounts: [],
+  additionalCharges: [],
+  paymentTerms: '50% advance, balance on delivery',
+  terms: 'Valid for 30 days.',
+  customerNotes: 'Looking forward to working with you.',
+  businessNotes: '',
+};
+const SAMPLE_CUSTOMER = {
+  name: 'Rohan Mehta',
+  companyName: 'TechVision Pvt Ltd',
+  email: 'rohan@techvision.example.com',
+  phone: '+91 9876543210',
+  billingAddress: '12, Business Hub, Andheri East, Mumbai - 400069',
+};
 
 // A4 = 794px wide. We scale it to fit a 360px preview box
 const PREVIEW_WIDTH = 360;
@@ -25,12 +48,6 @@ const A4_WIDTH = 794;
 const PREVIEW_SCALE = PREVIEW_WIDTH / A4_WIDTH;
 const PREVIEW_HEIGHT = Math.round(480 * PREVIEW_SCALE); // roughly A4 proportion
 
-// Sample data for template preview
-const SAMPLE_QUOTATION = {
-  ...mockQuotations[0],
-  quotationNumber: 'PREVIEW-001',
-};
-const SAMPLE_CUSTOMER = mockCustomers[0];
 
 export default function TemplatesPage() {
   const router = useRouter();
@@ -68,7 +85,7 @@ export default function TemplatesPage() {
   const handleSetDefault = async (template) => {
     try {
       const merged = { ...currentSettings, templateId: template.id, primaryColor: template.primaryColor, headerLayout: template.headerLayout };
-      await quotationSettingsService.saveSettings(user.businessId, merged);
+      await quotationSettingsService.updateSettings(user.businessId, merged);
       setActiveTemplateId(template.id);
       setCurrentSettings(merged);
       showSuccess(`"${template.name}" set as your default template`);

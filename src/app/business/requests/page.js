@@ -10,7 +10,6 @@ import DescriptionIcon from '@mui/icons-material/Description';
 
 import { useAuthStore } from '@/store/useAuthStore';
 import { quotationRequestService } from '@/services/quotationRequestService';
-import { customerService } from '@/services/customerService';
 import PageHeader from '@/components/common/PageHeader';
 import StatusChip from '@/components/common/StatusChip';
 import AppSearch from '@/components/common/AppSearch';
@@ -27,7 +26,6 @@ export default function BusinessRequestsPage() {
   const router = useRouter();
 
   const [requests, setRequests] = useState([]);
-  const [customers, setCustomers] = useState({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -37,14 +35,8 @@ export default function BusinessRequestsPage() {
   const fetchData = async () => {
     if (!user?.businessId) return;
     try {
-      const [reqs, custList] = await Promise.all([
-        quotationRequestService.getRequestsByBusiness(user.businessId),
-        customerService.getCustomers(user.businessId),
-      ]);
+      const reqs = await quotationRequestService.getRequestsByBusiness(user.businessId);
       setRequests(reqs.sort((a, b) => new Date(b.requestDate) - new Date(a.requestDate)));
-      const custMap = {};
-      custList.forEach(c => custMap[c.id] = c);
-      setCustomers(custMap);
     } catch (err) {
       showError('Failed to load requests');
     } finally {
@@ -61,10 +53,10 @@ export default function BusinessRequestsPage() {
     setDetailOpen(true);
   };
 
-  const handleStatusUpdate = async (id, status) => {
+  const handleStatusUpdate = async (id, status, reason = '') => {
     try {
-      await quotationRequestService.updateRequestStatus(id, status);
-      showSuccess('Request status updated');
+      await quotationRequestService.updateRequest(id, { status, rejectionReason: reason });
+      showSuccess(`Request status updated to ${status}`);
       fetchData();
     } catch (err) {
       showError('Failed to update status');
@@ -72,8 +64,9 @@ export default function BusinessRequestsPage() {
   };
 
   const filteredRequests = requests.filter(r => {
+    const customerName = r.customerInfo?.name || '';
     const matchSearch = r.id.toLowerCase().includes(search.toLowerCase()) ||
-      customers[r.customerId]?.name?.toLowerCase().includes(search.toLowerCase());
+      customerName.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === '' || r.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -102,7 +95,6 @@ export default function BusinessRequestsPage() {
       ) : (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {filteredRequests.map((req) => {
-            const customer = customers[req.customerId];
             return (
               <Box key={req.id}>
                 <Card sx={{ borderRadius: 3, '&:hover': { boxShadow: 4 }, transition: 'box-shadow 0.2s' }}>
@@ -111,7 +103,7 @@ export default function BusinessRequestsPage() {
                       <Box>
                         <Typography variant="subtitle1" fontWeight={700}>{req.id}</Typography>
                         <Typography variant="body2" color="text.secondary" mb={1}>
-                          From: <strong>{customer?.name || req.customerId}</strong> ({customer?.companyName}) • {formatDate(req.requestDate)}
+                          From: <strong>{req.customerInfo?.name || req.customerId}</strong> {req.customerInfo?.company ? `(${req.customerInfo.company})` : ''} • {formatDate(req.requestDate)}
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
                           {req.items.map((item, i) => (
@@ -130,14 +122,16 @@ export default function BusinessRequestsPage() {
                           <Button size="small" startIcon={<VisibilityIcon />} onClick={() => handleView(req)}>
                             View
                           </Button>
-                          {req.status === REQUEST_STATUS.SUBMITTED && (
+                          {[REQUEST_STATUS.SUBMITTED, REQUEST_STATUS.UNDER_REVIEW, REQUEST_STATUS.APPROVED].includes(req.status) && (
                             <Button
                               size="small"
                               variant="contained"
                               startIcon={<DescriptionIcon />}
                               onClick={() => {
-                                handleStatusUpdate(req.id, REQUEST_STATUS.UNDER_REVIEW);
-                                router.push(`/business/quotations/new?requestId=${req.id}`);
+                                if (req.status === REQUEST_STATUS.SUBMITTED) {
+                                  handleStatusUpdate(req.id, REQUEST_STATUS.UNDER_REVIEW);
+                                }
+                                router.push(`/business/quotations/new?requestId=${req.id}&customerId=${req.resolvedCustomerId || ''}`);
                               }}
                             >
                               Create Quotation
@@ -159,9 +153,8 @@ export default function BusinessRequestsPage() {
           open={detailOpen}
           onClose={() => setDetailOpen(false)}
           request={selectedRequest}
-          customer={customers[selectedRequest.customerId]}
-          onStatusUpdate={(status) => {
-            handleStatusUpdate(selectedRequest.id, status);
+          onStatusUpdate={(status, reason) => {
+            handleStatusUpdate(selectedRequest.id, status, reason);
             setDetailOpen(false);
           }}
         />

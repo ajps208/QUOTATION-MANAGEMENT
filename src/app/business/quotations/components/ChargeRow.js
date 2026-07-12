@@ -10,7 +10,7 @@ export default function ChargeRow({ charge, index, onUpdate, onRemove }) {
   return (
     <Box sx={{ mb: 2 }}>
       <Grid container spacing={3} alignItems="center">
-        <Grid item xs={12} sm={4}>
+        <Grid xs={12} sm={4}>
           <TextField
             label="Charge Name"
             fullWidth
@@ -19,7 +19,7 @@ export default function ChargeRow({ charge, index, onUpdate, onRemove }) {
             placeholder="e.g., Setup Fee, Delivery"
           />
         </Grid>
-        <Grid item xs={12} sm={3}>
+        <Grid xs={12} sm={3}>
           <TextField
             label="Amount"
             type="number"
@@ -29,7 +29,7 @@ export default function ChargeRow({ charge, index, onUpdate, onRemove }) {
             InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
           />
         </Grid>
-        <Grid item xs={6} sm={2}>
+        <Grid xs={6} sm={2}>
           <FormControlLabel
             control={
               <Switch
@@ -40,7 +40,7 @@ export default function ChargeRow({ charge, index, onUpdate, onRemove }) {
             label="Taxable"
           />
         </Grid>
-        <Grid item xs={4} sm={2}>
+        <Grid xs={4} sm={2}>
           {charge.taxable && (
             <TextField
               label="Tax %"
@@ -52,7 +52,7 @@ export default function ChargeRow({ charge, index, onUpdate, onRemove }) {
             />
           )}
         </Grid>
-        <Grid item xs={2} sm={1}>
+        <Grid xs={2} sm={1}>
           <IconButton color="error" onClick={() => onRemove(index)}>
             <DeleteIcon />
           </IconButton>

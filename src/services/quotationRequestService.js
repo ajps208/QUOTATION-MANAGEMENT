@@ -1,46 +1,64 @@
-import { mockQuotationRequests } from '@/data/mock';
-import { generateRequestId } from '@/utils/helpers';
-import { REQUEST_STATUS } from '@/constants/statuses';
-
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-let requests = [...mockQuotationRequests];
-
 export const quotationRequestService = {
-  async getRequestsByBusiness(businessId) {
-    await delay(300);
-    return requests.filter(r => r.businessId === businessId);
-  },
-
-  async getRequestsByCustomer(customerId) {
-    await delay(300);
-    return requests.filter(r => r.customerId === customerId);
+  async getRequests(businessId, customerId) {
+    const params = new URLSearchParams();
+    if (businessId) params.set('businessId', businessId);
+    if (customerId) params.set('customerId', customerId);
+    const res = await fetch(`/api/requests?${params}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch requests');
+    return data;
   },
 
   async getRequestById(id) {
-    await delay(300);
-    const req = requests.find(r => r.id === id);
-    if (!req) throw new Error('Request not found');
-    return { ...req };
+    const res = await fetch(`/api/requests/${id}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request not found');
+    return data;
   },
 
-  async submitRequest(data) {
-    await delay(500);
-    const newReq = {
-      id: generateRequestId(),
-      ...data,
-      requestDate: new Date().toISOString(),
-      status: REQUEST_STATUS.SUBMITTED,
-    };
-    requests.push(newReq);
-    return { ...newReq };
+  async createRequest(payload) {
+    const res = await fetch('/api/requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to create request');
+    return data;
+  },
+
+  async submitRequest(payload) {
+    return this.createRequest(payload);
+  },
+
+  async updateRequest(id, updates) {
+    const res = await fetch(`/api/requests/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update request');
+    return data;
   },
 
   async updateRequestStatus(id, status) {
-    await delay(400);
-    const index = requests.findIndex(r => r.id === id);
-    if (index === -1) throw new Error('Request not found');
-    
-    requests[index] = { ...requests[index], status };
-    return { ...requests[index] };
-  }
+    return this.updateRequest(id, { status });
+  },
+
+  async deleteRequest(id) {
+    const res = await fetch(`/api/requests/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to delete request');
+    return data;
+  },
+
+  // Alias used in some pages
+  async getRequestsByBusiness(businessId) {
+    return this.getRequests(businessId, null);
+  },
+
+  async getRequestsByCustomer(customerId) {
+    return this.getRequests(null, customerId);
+  },
 };
