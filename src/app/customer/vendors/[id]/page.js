@@ -84,13 +84,13 @@ export default function VendorDetailsPage({ params }) {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <IconButton onClick={() => router.push('/customer/vendors')} sx={{ bgcolor: 'background.paper' }}>
+      <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', mb: 3, gap: 2, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
+          <IconButton onClick={() => router.push('/customer/vendors')} sx={{ bgcolor: 'background.paper', flexShrink: 0 }}>
             <ArrowBackIcon />
           </IconButton>
-          <Box>
-            <Typography variant="h5" fontWeight={700}>{vendor.name}</Typography>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>{vendor.name}</Typography>
             <Typography variant="body2" color="text.secondary">{vendor.industry}</Typography>
           </Box>
         </Box>
@@ -103,13 +103,14 @@ export default function VendorDetailsPage({ params }) {
             </Badge>
           }
           onClick={() => router.push('/customer/vendors/cart')}
+          sx={{ flexShrink: 0 }}
         >
           View Request Cart
         </Button>
       </Box>
 
       {isDifferentVendorInCart && (
-        <Card sx={{ mb: 4, bgcolor: 'warning.light', color: 'warning.dark', borderRadius: 2 }}>
+        <Card sx={{ mb: 4, bgcolor: 'warning.light', color: 'warning.dark', borderRadius: 1 }}>
           <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
             <Typography variant="body2" fontWeight={600}>
               Note: Your cart contains items from a different vendor. Adding items from {vendor.name} will clear your current cart.
@@ -118,13 +119,13 @@ export default function VendorDetailsPage({ params }) {
         </Card>
       )}
 
-      <Card sx={{ mb: 4, borderRadius: 3 }}>
+      <Card sx={{ mb: 4, borderRadius: 1 }}>
         <CardContent sx={{ p: 4 }}>
           <Typography variant="body1" mb={2}>{vendor.description}</Typography>
           <Box sx={{ display: 'flex', gap: 3, color: 'text.secondary', flexWrap: 'wrap' }}>
             <Typography variant="body2"><strong>Email:</strong> {vendor.email}</Typography>
             <Typography variant="body2"><strong>Phone:</strong> {vendor.phone}</Typography>
-            <Typography variant="body2"><strong>Location:</strong> {vendor.city}, {vendor.country}</Typography>
+            <Typography variant="body2"><strong>Location:</strong> {[vendor.city, vendor.country].filter(Boolean).join(', ')}</Typography>
           </Box>
         </CardContent>
       </Card>
@@ -140,13 +141,13 @@ export default function VendorDetailsPage({ params }) {
           description={search ? 'No products match your search.' : 'This vendor has not added any products yet.'} 
         />
       ) : (
-        <Grid container spacing={3}>
+        <Grid container spacing={{ xs: 2, md: 3 }}>
           {filteredProducts.map((product) => (
             <Grid xs={12} md={6} lg={4} key={product.id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 3 }}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 1 }}>
                 <CardContent sx={{ flexGrow: 1, p: 3 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                    <Typography variant="h6" fontWeight={600} lineHeight={1.2} pr={2}>
+                    <Typography variant="h6" fontWeight={600} sx={{ lineHeight: 1.2, pr: 2 }}>
                       {product.name}
                     </Typography>
                     <Chip label={product.type} size="small" variant="outlined" />
@@ -163,7 +164,7 @@ export default function VendorDetailsPage({ params }) {
                 </CardContent>
                 <Divider />
                 <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: 'background.default' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'background.paper' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper' }}>
                     <IconButton size="small" onClick={() => handleQuantityChange(product.id, -1, product.minQuantity)}>
                       <RemoveIcon fontSize="small" />
                     </IconButton>

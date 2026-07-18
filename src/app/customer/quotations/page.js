@@ -16,6 +16,7 @@ import EmptyState from '@/components/common/EmptyState';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { QUOTATION_STATUS } from '@/constants/statuses';
 import { formatCurrency, formatDate } from '@/utils/formatters';
+import { calculateQuotationTotals } from '@/utils/quotationCalculations';
 
 export default function CustomerQuotationsPage() {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function CustomerQuotationsPage() {
       if (!user?.id) return;
       try {
         const [quots, bizList] = await Promise.all([
-          quotationService.getQuotationsByCustomer(user.id),
+          quotationService.getQuotationsByUser(user.id),
           businessService.getBusinesses(),
         ]);
         setQuotations(quots.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
@@ -63,27 +64,27 @@ export default function CustomerQuotationsPage() {
     {
       field: 'businessId',
       label: 'From',
+      hideOnMobile: true,
       render: (row) => businesses[row.businessId]?.name || row.businessId,
     },
     {
       field: 'quotationDate',
       label: 'Date',
+      hideOnMobile: true,
       render: (row) => formatDate(row.quotationDate),
-    },
-    {
-      field: 'expiryDate',
-      label: 'Valid Until',
-      render: (row) => formatDate(row.expiryDate),
     },
     {
       field: 'grandTotal',
       label: 'Amount',
       align: 'right',
-      render: (row) => (
-        <Typography variant="body2" fontWeight={700} color="primary.main">
-          {formatCurrency(row.grandTotal)}
-        </Typography>
-      ),
+      render: (row) => {
+        const totals = calculateQuotationTotals(row);
+        return (
+          <Typography variant="body2" fontWeight={700} color="primary.main">
+            {formatCurrency(totals.grandTotal)}
+          </Typography>
+        );
+      },
     },
     {
       field: 'status',
@@ -119,16 +120,19 @@ export default function CustomerQuotationsPage() {
         <AppFilter label="Status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} options={statusOptions} />
       </Box>
 
-      <AppTable
-        columns={columns}
-        data={filtered}
-        emptyState={
-          <EmptyState
-            title="No quotations received yet"
-            description="Submit a quotation request to a vendor and they will send you a quotation."
-          />
-        }
-      />
+      <Card sx={{ overflow: 'hidden' }}>
+        <AppTable
+          columns={columns}
+          data={filtered}
+          onRowClick={(row) => router.push(`/customer/quotations/${row.id}`)}
+          emptyState={
+            <EmptyState
+              title="No quotations received yet"
+              description="Submit a quotation request to a vendor and they will send you a quotation."
+            />
+          }
+        />
+      </Card>
     </Box>
   );
 }

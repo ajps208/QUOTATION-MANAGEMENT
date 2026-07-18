@@ -2,6 +2,9 @@ import connectToDatabase from '@/lib/mongodb';
 import Quotation from '@/models/Quotation';
 import Activity from '@/models/Activity';
 import Business from '@/models/Business';
+import Customer from '@/models/Customer';
+import User from '@/models/User';
+import Notification from '@/models/Notification';
 import QuotationRequest from '@/models/QuotationRequest';
 import { QUOTATION_STATUS, REQUEST_STATUS } from '@/constants/statuses';
 
@@ -29,16 +32,36 @@ function serialize(doc) {
   return obj;
 }
 
-// GET /api/quotations?businessId=xxx&customerId=xxx
+// GET /api/quotations?businessId=xxx&customerId=xxx&userId=xxx
 export async function GET(request) {
   try {
     await connectToDatabase();
     const { searchParams } = new URL(request.url);
     const businessId = searchParams.get('businessId');
     const customerId = searchParams.get('customerId');
+    const userId = searchParams.get('userId');
     const query = {};
     if (businessId) query.businessId = businessId;
-    if (customerId) query.customerId = customerId;
+
+    if (customerId) {
+      query.customerId = customerId;
+    } else if (userId) {
+      // Resolve User ID to Customer CRM IDs via email match
+      const user = await User.findById(userId).select('email');
+      if (user?.email) {
+        const customerRecords = await Customer.find({ email: user.email }).select('_id');
+        const customerIds = customerRecords.map(c => c._id);
+        if (customerIds.length > 0) {
+          query.customerId = { $in: customerIds };
+        } else {
+          // No matching Customer CRM record found — return empty
+          return Response.json([]);
+        }
+      } else {
+        return Response.json([]);
+      }
+    }
+
     const quotations = await Quotation.find(query).sort({ createdAt: -1 });
     return Response.json(quotations.map(serialize));
   } catch (err) {
@@ -78,6 +101,22 @@ export async function POST(request) {
         userName: data.userName || 'Unknown',
         details: `${quotationNumber} created.`,
       });
+    }
+
+    // Send notification to customer when quotation is sent directly
+    if (data.status === QUOTATION_STATUS.SENT) {
+      const customer = await Customer.findById(quotation.customerId);
+      if (customer) {
+        const customerUser = await User.findOne({ email: customer.email });
+        if (customerUser) {
+          await Notification.create({
+            userId: customerUser._id,
+            title: 'New Quotation Received',
+            message: `You have received a new quotation (${quotationNumber}) from ${business?.name || 'a vendor'}.`,
+            link: `/customer/quotations/${quotation._id}`,
+          });
+        }
+      }
     }
 
     return Response.json(serialize(quotation), { status: 201 });

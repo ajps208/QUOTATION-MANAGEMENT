@@ -106,7 +106,7 @@ export default function TemplatesPage() {
         onAction={() => router.push('/business/quotation-settings')}
       />
 
-      <Grid container spacing={4}>
+      <Grid container spacing={{ xs: 3, md: 4 }}>
         {templates.map(template => {
           const isActive = template.id === activeTemplateId;
           // Merge template defaults with business's current settings for preview
@@ -129,11 +129,11 @@ export default function TemplatesPage() {
                   height: '100%',
                   display: 'flex',
                   flexDirection: 'column',
-                  borderRadius: 3,
+                  borderRadius: 1,
                   border: isActive ? '2px solid' : '1px solid',
                   borderColor: isActive ? 'primary.main' : 'divider',
                   position: 'relative',
-                  overflow: 'visible',
+                  overflow: 'hidden',
                   transition: 'all 0.25s ease',
                   '&:hover': {
                     transform: 'translateY(-4px)',
@@ -142,8 +142,8 @@ export default function TemplatesPage() {
                 }}
               >
                 {isActive && (
-                  <Box sx={{ position: 'absolute', top: -14, right: -14, bgcolor: 'background.paper', borderRadius: '50%', zIndex: 1 }}>
-                    <CheckCircleIcon color="primary" sx={{ fontSize: 36 }} />
+                  <Box sx={{ position: 'absolute', top: 10, right: 10, bgcolor: 'background.paper', borderRadius: '50%', zIndex: 1, boxShadow: 1 }}>
+                    <CheckCircleIcon color="primary" sx={{ fontSize: 28 }} />
                   </Box>
                 )}
 
@@ -183,7 +183,7 @@ export default function TemplatesPage() {
                     transition: 'all 0.2s',
                     '&:hover': { opacity: 1, bgcolor: 'rgba(79,70,229,0.08)' },
                   }}>
-                    <Box sx={{ bgcolor: 'white', borderRadius: 2, px: 2, py: 1, boxShadow: 3 }}>
+                    <Box sx={{ bgcolor: 'white', borderRadius: 1, px: 2, py: 1, boxShadow: 3 }}>
                       <Typography variant="body2" fontWeight={600} color="primary">Click to Select</Typography>
                     </Box>
                   </Box>

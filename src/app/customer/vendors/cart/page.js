@@ -103,22 +103,22 @@ export default function CartPage() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, flexWrap: 'wrap' }}>
         <IconButton onClick={() => router.back()} sx={{ bgcolor: 'background.paper' }}>
           <ArrowBackIcon />
         </IconButton>
         <Box>
-          <Typography variant="h5" fontWeight={700}>Request Cart</Typography>
+          <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>Request Cart</Typography>
           <Typography variant="body2" color="text.secondary">
             {vendor ? `Requesting from ${vendor.name}` : 'Loading vendor…'}
           </Typography>
         </Box>
       </Box>
 
-      <Grid container spacing={4}>
+      <Grid container spacing={{ xs: 2, md: 4 }}>
         {/* Cart Items */}
         <Grid xs={12} md={8}>
-          <Card sx={{ borderRadius: 3 }}>
+          <Card sx={{ borderRadius: 1 }}>
             <CardContent sx={{ p: 0 }}>
               {cartStore.items.map((item, index) => (
                 <Box key={item.productId}>
@@ -138,7 +138,7 @@ export default function CartPage() {
                           onChange={(e) => handleQuantityChange(item.productId, e.target.value)}
                           size="small"
                           sx={{ width: 90 }}
-                          inputProps={{ min: 1 }}
+                          slotProps={{ input: { min: 1 } }}
                         />
                         <IconButton color="error" onClick={() => handleRemove(item.productId)} size="small">
                           <DeleteIcon />
@@ -163,7 +163,7 @@ export default function CartPage() {
 
         {/* Summary & Submit */}
         <Grid xs={12} md={4}>
-          <Card sx={{ borderRadius: 3, position: 'sticky', top: 80 }}>
+          <Card sx={{ borderRadius: 1, position: 'sticky', top: 80 }}>
             <CardContent sx={{ p: 3 }}>
               <Typography variant="h6" fontWeight={600} mb={2}>Request Summary</Typography>
 
@@ -178,7 +178,7 @@ export default function CartPage() {
 
               <Divider sx={{ mb: 3 }} />
 
-              <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+              <Alert severity="info" sx={{ mb: 3, borderRadius: 1 }}>
                 The business will review your request and send back a formal quotation with pricing.
               </Alert>
 

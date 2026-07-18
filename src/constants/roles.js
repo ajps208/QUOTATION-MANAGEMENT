@@ -9,14 +9,24 @@ export const USER_ROLES = {
 
 export const BUSINESS_NAV_ITEMS = [
   { label: 'Dashboard', href: ROUTES.BUSINESS.DASHBOARD },
-  { label: 'Categories', href: ROUTES.BUSINESS.CATEGORIES },
-  { label: 'Products', href: ROUTES.BUSINESS.PRODUCTS },
-  { label: 'Customers', href: ROUTES.BUSINESS.CUSTOMERS },
-  { label: 'Requests', href: ROUTES.BUSINESS.QUOTATION_REQUESTS },
   { label: 'Quotations', href: ROUTES.BUSINESS.QUOTATIONS },
-  { label: 'Templates', href: ROUTES.BUSINESS.TEMPLATES },
-  { label: 'Notifications', href: ROUTES.BUSINESS.NOTIFICATIONS },
-  { label: 'Settings', href: ROUTES.BUSINESS.SETTINGS },
+  { label: 'Requests', href: ROUTES.BUSINESS.QUOTATION_REQUESTS },
+  {
+    label: 'Operations',
+    children: [
+      { label: 'Products', href: ROUTES.BUSINESS.PRODUCTS },
+      { label: 'Categories', href: ROUTES.BUSINESS.CATEGORIES },
+      { label: 'Customers', href: ROUTES.BUSINESS.CUSTOMERS },
+    ],
+  },
+  {
+    label: 'Others',
+    children: [
+      { label: 'Templates', href: ROUTES.BUSINESS.TEMPLATES },
+      { label: 'Notifications', href: ROUTES.BUSINESS.NOTIFICATIONS },
+      { label: 'Settings', href: ROUTES.BUSINESS.SETTINGS },
+    ],
+  },
 ];
 
 export const CUSTOMER_NAV_ITEMS = [

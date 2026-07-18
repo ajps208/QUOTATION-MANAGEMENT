@@ -1,219 +1,323 @@
 'use client';
-import { useEffect, useState } from 'react';
-import {
-  Box, Grid, Typography, Card, CardContent, Avatar,
-  List, ListItem, ListItemAvatar, ListItemText, Chip, Button, Divider
-} from '@mui/material';
-import DescriptionIcon from '@mui/icons-material/Description';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ReceiptIcon from '@mui/icons-material/Receipt';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-
-import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
-import SendIcon from '@mui/icons-material/Send';
+import { useEffect, useState, useMemo } from 'react';
+import { Box, Grid } from '@mui/material';
+import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded';
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
+import ReceiptLongRoundedIcon from '@mui/icons-material/ReceiptLongRounded';
+import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded';
+import PeopleAltRoundedIcon from '@mui/icons-material/PeopleAltRounded';
+import Inventory2RoundedIcon from '@mui/icons-material/Inventory2Rounded';
 
 import { useAuthStore } from '@/store/useAuthStore';
 import { quotationService } from '@/services/quotationService';
 import { quotationRequestService } from '@/services/quotationRequestService';
-import StatCard from './components/StatCard';
-import RevenueChart from './components/RevenueChart';
-import PageHeader from '@/components/common/PageHeader';
+import { productService } from '@/services/productService';
+import { customerService } from '@/services/customerService';
 import { QUOTATION_STATUS, REQUEST_STATUS } from '@/constants/statuses';
 
-const activityItems = [
-  { title: 'Quotation #QT-1024 Accepted', time: '2 hours ago', color: '#16a34a', bg: '#dcfce7', icon: <CheckCircleIcon sx={{ fontSize: 16 }} /> },
-  { title: 'New Request from Acme Corp', time: '5 hours ago', color: '#ca8a04', bg: '#fef9c3', icon: <NotificationsActiveIcon sx={{ fontSize: 16 }} /> },
-  { title: 'Quotation #QT-1025 Sent', time: '1 day ago', color: '#2563eb', bg: '#dbeafe', icon: <SendIcon sx={{ fontSize: 16 }} /> },
-  { title: 'Payment received for #QT-1020', time: '2 days ago', color: '#4f46e5', bg: '#ede9fe', icon: <CheckCircleIcon sx={{ fontSize: 16 }} /> },
-];
+import DashboardHeader from './components/DashboardHeader';
+import KpiCard from './components/KpiCard';
+import RevenueChart from './components/RevenueChart';
+import QuotationsChart from './components/QuotationsChart';
+import StatusDistribution from './components/StatusDistribution';
+import QuickActions from './components/QuickActions';
+import RecentQuotations from './components/RecentQuotations';
+import RecentActivity from './components/RecentActivity';
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function buildMonthlyRevenue(quotations) {
+  const now = new Date();
+  const monthly = {};
+
+  quotations.forEach((q) => {
+    if (q.status === QUOTATION_STATUS.ACCEPTED && q.createdAt) {
+      const d = new Date(q.createdAt);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      if (!monthly[key]) monthly[key] = 0;
+      monthly[key] += q.grandTotal || 0;
+    }
+  });
+
+  const result = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    result.push({
+      name: MONTHS[d.getMonth()],
+      revenue: monthly[key] || 0,
+    });
+  }
+  return result;
+}
+
+function buildMonthlyQuotations(quotations) {
+  const now = new Date();
+  const monthly = {};
+
+  quotations.forEach((q) => {
+    if (q.createdAt) {
+      const d = new Date(q.createdAt);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      if (!monthly[key]) monthly[key] = 0;
+      monthly[key] += 1;
+    }
+  });
+
+  const result = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    result.push({
+      name: MONTHS[d.getMonth()],
+      count: monthly[key] || 0,
+    });
+  }
+  return result;
+}
+
+function buildStatusDistribution(quotations) {
+  const counts = {};
+  quotations.forEach((q) => {
+    const status = q.status || 'Draft';
+    counts[status] = (counts[status] || 0) + 1;
+  });
+
+  return Object.entries(counts)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
+}
+
+function buildActivities(quotations, requests) {
+  const activities = [];
+
+  const recentQuotations = [...quotations]
+    .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+    .slice(0, 8);
+
+  recentQuotations.forEach((q) => {
+    let type = 'created';
+    let title = `Quotation ${q.quotationNumber || ''} created`;
+
+    if (q.status === QUOTATION_STATUS.ACCEPTED) {
+      type = 'accepted';
+      title = `Quotation ${q.quotationNumber || ''} accepted`;
+    } else if (q.status === QUOTATION_STATUS.SENT) {
+      type = 'sent';
+      title = `Quotation ${q.quotationNumber || ''} sent`;
+    } else if (q.status === QUOTATION_STATUS.REJECTED) {
+      type = 'updated';
+      title = `Quotation ${q.quotationNumber || ''} rejected`;
+    }
+
+    activities.push({
+      title,
+      time: q.updatedAt || q.createdAt,
+      type,
+    });
+  });
+
+  const recentRequests = [...requests]
+    .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+    .slice(0, 4);
+
+  recentRequests.forEach((r) => {
+    let type = 'request';
+    let title = `New request from ${r.customerName || 'customer'}`;
+
+    if (r.status === REQUEST_STATUS.APPROVED) {
+      type = 'accepted';
+      title = `Request ${r.requestNumber || ''} approved`;
+    }
+
+    activities.push({
+      title,
+      time: r.updatedAt || r.createdAt,
+      type,
+    });
+  });
+
+  return activities
+    .sort((a, b) => new Date(b.time) - new Date(a.time))
+    .slice(0, 10);
+}
 
 export default function BusinessDashboard() {
   const { user } = useAuthStore();
-  const [stats, setStats] = useState({
-    pendingRequests: 0,
-    activeQuotations: 0,
-    acceptedQuotations: 0,
-    totalRevenue: 0,
-  });
-  const [chartData, setChartData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [quotations, setQuotations] = useState([]);
+  const [requests, setRequests] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [customers, setCustomers] = useState([]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       if (!user?.businessId) return;
+      setLoading(true);
       try {
-        const [requests, quotations] = await Promise.all([
-          quotationRequestService.getRequestsByBusiness(user.businessId),
-          quotationService.getQuotationsByBusiness(user.businessId),
-        ]);
+        const [quotationsData, requestsData, productsData, customersData] =
+          await Promise.all([
+            quotationService.getQuotationsByBusiness(user.businessId).catch(() => []),
+            quotationRequestService.getRequestsByBusiness(user.businessId).catch(() => []),
+            productService.getProducts(user.businessId).catch(() => []),
+            customerService.getCustomers(user.businessId).catch(() => []),
+          ]);
 
-        const pendingRequests = requests.filter(
-          r => r.status === REQUEST_STATUS.SUBMITTED || r.status === REQUEST_STATUS.UNDER_REVIEW
-        ).length;
-        const activeQuotations = quotations.filter(
-          q => q.status === QUOTATION_STATUS.SENT || q.status === QUOTATION_STATUS.VIEWED
-        ).length;
-        const accepted = quotations.filter(q => q.status === QUOTATION_STATUS.ACCEPTED);
-        const acceptedQuotations = accepted.length;
-        const totalRevenue = accepted.reduce((sum, q) => sum + (q.grandTotal || 0), 0);
-
-        setStats({ pendingRequests, activeQuotations, acceptedQuotations, totalRevenue });
-
-        setChartData([
-          { name: 'Jan', revenue: 40000 },
-          { name: 'Feb', revenue: 30000 },
-          { name: 'Mar', revenue: 60000 },
-          { name: 'Apr', revenue: totalRevenue > 0 ? totalRevenue : 80000 },
-          { name: 'May', revenue: 55000 },
-          { name: 'Jun', revenue: 72000 },
-        ]);
+        setQuotations(Array.isArray(quotationsData) ? quotationsData : []);
+        setRequests(Array.isArray(requestsData) ? requestsData : []);
+        setProducts(Array.isArray(productsData) ? productsData : []);
+        setCustomers(Array.isArray(customersData) ? customersData : []);
       } catch (error) {
         console.error('Failed to fetch dashboard data:', error);
+      } finally {
+        setLoading(false);
       }
     };
     fetchDashboardData();
   }, [user]);
 
+  const kpis = useMemo(() => {
+    const totalQuotations = quotations.length;
+    const draftQuotations = quotations.filter(
+      (q) => q.status === QUOTATION_STATUS.DRAFT
+    ).length;
+    const approvedQuotations = quotations.filter(
+      (q) => q.status === QUOTATION_STATUS.ACCEPTED
+    ).length;
+    const totalRevenue = quotations
+      .filter((q) => q.status === QUOTATION_STATUS.ACCEPTED)
+      .reduce((sum, q) => sum + (q.grandTotal || 0), 0);
+    const totalCustomers = customers.length;
+    const totalProducts = products.length;
+
+    return {
+      totalQuotations,
+      draftQuotations,
+      approvedQuotations,
+      totalRevenue,
+      totalCustomers,
+      totalProducts,
+    };
+  }, [quotations, customers, products]);
+
+  const chartData = useMemo(() => ({
+    revenue: buildMonthlyRevenue(quotations),
+    monthlyQuotations: buildMonthlyQuotations(quotations),
+    statusDistribution: buildStatusDistribution(quotations),
+  }), [quotations]);
+
+  const recentQuotations = useMemo(() => {
+    return [...quotations]
+      .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+      .slice(0, 5);
+  }, [quotations]);
+
+  const activities = useMemo(() => {
+    return buildActivities(quotations, requests);
+  }, [quotations, requests]);
+
   if (!user) return null;
 
-  // Get first name only
-  const firstName = user.name?.split(' ')[0] || user.name;
-
   return (
-    <Box>
-      {/* Welcome Header */}
-      <Box sx={{ mb: 6 }}>
-        <Typography
-          variant="h4"
-          fontWeight={600}
-          sx={{ letterSpacing: '-0.01em', color: 'text.primary', lineHeight: 1.2 }}
-        >
-          Good morning, {firstName} 👋
-        </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mt: 1 }}>
-          Here&apos;s what&apos;s happening with your business today.
-        </Typography>
-        <Divider sx={{ mt: 4 }} />
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 3, md: 4 } }}>
+      <DashboardHeader
+        userName={user.name}
+        businessName={user.companyName || user.businessName}
+      />
+
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: 'repeat(2, 1fr)',
+            sm: 'repeat(2, 1fr)',
+            md: 'repeat(3, 1fr)',
+            lg: 'repeat(6, 1fr)',
+          },
+          gap: { xs: 1.5, sm: 2 },
+        }}
+      >
+        <KpiCard
+          title="Total Quotations"
+          value={kpis.totalQuotations}
+          icon={<DescriptionRoundedIcon />}
+          color="primary"
+          subtitle="All time quotations"
+          loading={loading}
+        />
+        <KpiCard
+          title="Draft Quotations"
+          value={kpis.draftQuotations}
+          icon={<ReceiptLongRoundedIcon />}
+          color="warning"
+          subtitle="Pending to send"
+          loading={loading}
+        />
+        <KpiCard
+          title="Approved"
+          value={kpis.approvedQuotations}
+          icon={<CheckCircleRoundedIcon />}
+          color="success"
+          subtitle="Successfully closed"
+          loading={loading}
+        />
+        <KpiCard
+          title="Revenue"
+          value={`₹${kpis.totalRevenue.toLocaleString()}`}
+          icon={<TrendingUpRoundedIcon />}
+          color="info"
+          subtitle="From accepted quotations"
+          loading={loading}
+        />
+        <KpiCard
+          title="Customers"
+          value={kpis.totalCustomers}
+          icon={<PeopleAltRoundedIcon />}
+          color="secondary"
+          subtitle="Total customers"
+          loading={loading}
+        />
+        <KpiCard
+          title="Products"
+          value={kpis.totalProducts}
+          icon={<Inventory2RoundedIcon />}
+          color="error"
+          subtitle="In your catalog"
+          loading={loading}
+        />
       </Box>
 
-      {/* Stats Row */}
-      <Grid container spacing={3} sx={{ mb: 6 }}>
-        <Grid xs={12} sm={6} lg={3}>
-          <StatCard
-            title="Pending Requests"
-            value={stats.pendingRequests}
-            icon={<DescriptionIcon />}
-            color="warning"
-            subtitle="Awaiting your response"
-          />
-        </Grid>
-        <Grid xs={12} sm={6} lg={3}>
-          <StatCard
-            title="Active Quotations"
-            value={stats.activeQuotations}
-            icon={<ReceiptIcon />}
-            color="info"
-            subtitle="Sent to customers"
-          />
-        </Grid>
-        <Grid xs={12} sm={6} lg={3}>
-          <StatCard
-            title="Accepted Quotations"
-            value={stats.acceptedQuotations}
-            icon={<CheckCircleIcon />}
-            color="success"
-            subtitle="Successfully closed"
-          />
-        </Grid>
-        <Grid xs={12} sm={6} lg={3}>
-          <StatCard
-            title="Total Revenue"
-            value={`₹${stats.totalRevenue.toLocaleString()}`}
-            icon={<TrendingUpIcon />}
-            color="primary"
-            subtitle="From accepted quotations"
-          />
-        </Grid>
-      </Grid>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: '1fr',
+            lg: '1fr 1fr',
+          },
+          gap: { xs: 2, md: 2.5 },
+        }}
+      >
+        <RevenueChart data={chartData.revenue} loading={loading} />
+        <QuotationsChart data={chartData.monthlyQuotations} loading={loading} />
+      </Box>
 
-      {/* Chart + Activity Row */}
-      <Grid container spacing={3}>
-        {/* Revenue Chart */}
-        <Grid xs={12} lg={8}>
-          <RevenueChart data={chartData} />
-        </Grid>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: '1fr',
+            lg: '1fr 1fr',
+          },
+          gap: { xs: 2, md: 2.5 },
+        }}
+      >
+        <StatusDistribution data={chartData.statusDistribution} loading={loading} />
+        <RecentActivity activities={activities} loading={loading} />
+      </Box>
 
-        {/* Recent Activity */}
-        <Grid xs={12} lg={4}>
-          <Card sx={{ height: '100%' }}>
-            <CardContent sx={{ p: '28px !important', display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" fontWeight={600} color="text.primary">
-                  Recent Activity
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  Latest events on your account
-                </Typography>
-              </Box>
+      <QuickActions />
 
-              <List disablePadding sx={{ flex: 1 }}>
-                {activityItems.map((activity, idx) => (
-                  <ListItem
-                    key={idx}
-                    disableGutters
-                    alignItems="flex-start"
-                    sx={{
-                      py: 1.5,
-                      borderBottom: idx < activityItems.length - 1 ? '1px solid' : 'none',
-                      borderColor: 'divider',
-                    }}
-                  >
-                    <ListItemAvatar sx={{ minWidth: 44 }}>
-                      <Avatar
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          bgcolor: activity.bg,
-                          color: activity.color,
-                        }}
-                      >
-                        {activity.icon}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      disableTypography
-                      primary={
-                        <Typography variant="body2" fontWeight={600} color="text.primary" sx={{ lineHeight: 1.4 }}>
-                          {activity.title}
-                        </Typography>
-                      }
-                      secondary={
-                        <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                          <AccessTimeIcon sx={{ fontSize: 12, color: 'text.disabled' }} />
-                          <Typography component="span" variant="caption" color="text.secondary">
-                            {activity.time}
-                          </Typography>
-                        </Box>
-                      }
-                    />
-                  </ListItem>
-                ))}
-              </List>
-
-              <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-                <Button
-                  size="small"
-                  endIcon={<ArrowForwardIcon />}
-                  sx={{ px: 0, color: 'primary.main', fontWeight: 600 }}
-                >
-                  View all activity
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      <RecentQuotations quotations={recentQuotations} loading={loading} />
     </Box>
   );
 }

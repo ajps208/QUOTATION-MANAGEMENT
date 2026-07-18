@@ -58,10 +58,10 @@ export default function VendorsPage() {
           description={search ? 'Try adjusting your search criteria.' : 'There are no businesses registered yet.'}
         />
       ) : (
-        <Grid container spacing={4}>
+        <Grid container spacing={{ xs: 2, md: 4 }}>
           {filteredVendors.map((vendor) => (
             <Grid xs={12} sm={6} md={4} key={vendor.id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 3, '&:hover': { boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }, transition: 'box-shadow 0.2s' }}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 1, '&:hover': { boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }, transition: 'box-shadow 0.2s' }}>
                 <CardContent sx={{ flexGrow: 1, p: 3 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                     <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
@@ -83,7 +83,7 @@ export default function VendorsPage() {
 
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
                     <Chip label={vendor.type} size="small" variant="outlined" />
-                    <Chip label={`${vendor.city}, ${vendor.country}`} size="small" variant="outlined" />
+                    <Chip label={[vendor.city, vendor.country].filter(Boolean).join(', ')} size="small" variant="outlined" />
                   </Box>
                 </CardContent>
                 <Box sx={{ p: 2, pt: 0 }}>

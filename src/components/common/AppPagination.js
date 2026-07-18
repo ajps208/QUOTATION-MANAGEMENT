@@ -1,14 +1,14 @@
 import { TablePagination } from '@mui/material';
 import { DEFAULTS } from '@/constants/defaults';
 
-export default function AppPagination({ 
-  count, 
-  page, 
-  rowsPerPage, 
-  onPageChange, 
+export default function AppPagination({
+  count,
+  page,
+  rowsPerPage,
+  onPageChange,
   onRowsPerPageChange,
   rowsPerPageOptions = DEFAULTS.PAGINATION.PAGE_SIZE_OPTIONS,
-  ...props 
+  ...props
 }) {
   return (
     <TablePagination
@@ -19,6 +19,7 @@ export default function AppPagination({
       rowsPerPage={rowsPerPage}
       onRowsPerPageChange={onRowsPerPageChange}
       rowsPerPageOptions={rowsPerPageOptions}
+      sx={{ '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': { fontSize: '0.8125rem' } }}
       {...props}
     />
   );

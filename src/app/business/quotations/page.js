@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Box, Typography, Button, Chip, Grid, Card, CardContent
+  Box, Typography, Button, Card, Chip
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -66,24 +66,27 @@ export default function BusinessQuotationsPage() {
     {
       field: 'customerId',
       label: 'Customer',
-      render: (row) => customers[row.customerId]?.name || row.customerId,
+      hideOnMobile: true,
+      render: (row) => (
+        <Typography variant="body2" fontWeight={500}>
+          {customers[row.customerId]?.name || row.customerId}
+        </Typography>
+      ),
     },
     {
       field: 'quotationDate',
       label: 'Date',
-      render: (row) => formatDate(row.quotationDate),
-    },
-    {
-      field: 'expiryDate',
-      label: 'Expires',
-      render: (row) => formatDate(row.expiryDate),
+      hideOnMobile: true,
+      render: (row) => (
+        <Typography variant="body2" color="text.secondary">{formatDate(row.quotationDate)}</Typography>
+      ),
     },
     {
       field: 'grandTotal',
       label: 'Amount',
       align: 'right',
       render: (row) => (
-        <Typography variant="body2" fontWeight={700} color="primary.main">
+        <Typography variant="body2" fontWeight={600} color="primary.main">
           {formatCurrency(row.grandTotal)}
         </Typography>
       ),
@@ -101,8 +104,9 @@ export default function BusinessQuotationsPage() {
       render: (row) => (
         <Button
           size="small"
-          startIcon={<VisibilityIcon />}
+          startIcon={<VisibilityIcon sx={{ fontSize: 16 }} />}
           onClick={() => router.push(`/business/quotations/${row.id}`)}
+          sx={{ fontSize: '0.8125rem' }}
         >
           View
         </Button>
@@ -120,7 +124,7 @@ export default function BusinessQuotationsPage() {
         onAction={() => router.push('/business/quotations/new')}
       />
 
-      <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
         <AppSearch value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by number or customer..." />
         <AppFilter label="Status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} options={statusOptions} />
       </Box>
@@ -129,6 +133,7 @@ export default function BusinessQuotationsPage() {
         <AppTable
           columns={columns}
           data={filtered}
+          onRowClick={(row) => router.push(`/business/quotations/${row.id}`)}
           emptyState={
             <EmptyState
               title="No quotations found"

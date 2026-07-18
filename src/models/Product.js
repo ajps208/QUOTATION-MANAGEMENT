@@ -14,7 +14,7 @@ const productSchema = new mongoose.Schema({
   unit: { 
     type: String, 
     enum: Object.values(UNITS),
-    default: UNITS.ITEM 
+    default: UNITS.PIECE 
   },
   basePrice: { type: Number, required: true },
   taxPercent: { type: Number, default: 18 },

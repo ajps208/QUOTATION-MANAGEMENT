@@ -97,7 +97,7 @@ export default function BusinessRequestsPage() {
           {filteredRequests.map((req) => {
             return (
               <Box key={req.id}>
-                <Card sx={{ borderRadius: 3, '&:hover': { boxShadow: 4 }, transition: 'box-shadow 0.2s' }}>
+                <Card sx={{ borderRadius: 1, '&:hover': { boxShadow: 4 }, transition: 'box-shadow 0.2s' }}>
                   <CardContent sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
                       <Box>

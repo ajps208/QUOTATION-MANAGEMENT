@@ -2,8 +2,8 @@
 import { Card, CardContent, Typography, Box, Skeleton } from '@mui/material';
 import {
   ResponsiveContainer,
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -21,7 +21,7 @@ const CustomTooltip = ({ active, payload, label }) => {
           py: 1.5,
           boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
           border: '1px solid rgba(255,255,255,0.06)',
-          minWidth: 120,
+          minWidth: 110,
         }}
       >
         <Typography
@@ -34,7 +34,7 @@ const CustomTooltip = ({ active, payload, label }) => {
           variant="subtitle2"
           sx={{ color: '#ffffff', fontWeight: 700, fontSize: '0.9375rem' }}
         >
-          ₹{payload[0].value.toLocaleString()}
+          {payload[0].value} quotation{payload[0].value !== 1 ? 's' : ''}
         </Typography>
       </Box>
     );
@@ -42,7 +42,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-export default function RevenueChart({ data, loading = false }) {
+export default function QuotationsChart({ data, loading = false }) {
   return (
     <Card
       sx={{
@@ -69,7 +69,7 @@ export default function RevenueChart({ data, loading = false }) {
               letterSpacing: '-0.01em',
             }}
           >
-            Revenue Overview
+            Monthly Quotations
           </Typography>
           <Typography
             variant="body2"
@@ -79,7 +79,7 @@ export default function RevenueChart({ data, loading = false }) {
               fontSize: '0.8125rem',
             }}
           >
-            Monthly revenue from accepted quotations
+            Quotations created per month
           </Typography>
         </Box>
 
@@ -92,15 +92,15 @@ export default function RevenueChart({ data, loading = false }) {
             />
           ) : data && data.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
+              <BarChart
                 data={data}
                 margin={{ top: 8, right: 4, left: -16, bottom: 0 }}
+                barSize={28}
               >
                 <defs>
-                  <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#1F6B47" stopOpacity={0.16} />
-                    <stop offset="50%" stopColor="#1F6B47" stopOpacity={0.06} />
-                    <stop offset="100%" stopColor="#1F6B47" stopOpacity={0} />
+                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#68AE8E" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#1F6B47" stopOpacity={0.85} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -130,38 +130,23 @@ export default function RevenueChart({ data, loading = false }) {
                     fontWeight: 500,
                   }}
                   dx={-4}
-                  tickFormatter={(v) =>
-                    v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`
-                  }
-                  width={56}
+                  allowDecimals={false}
+                  width={36}
                 />
                 <Tooltip
                   content={<CustomTooltip />}
                   cursor={{
-                    stroke: '#ECECEC',
-                    strokeWidth: 1,
-                    strokeDasharray: '4 4',
+                    fill: 'rgba(31,107,71,0.04)',
+                    radius: 6,
                   }}
                 />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#1F6B47"
-                  strokeWidth={2.5}
-                  fillOpacity={1}
-                  fill="url(#revenueGradient)"
-                  dot={false}
-                  activeDot={{
-                    r: 6,
-                    fill: '#1F6B47',
-                    stroke: '#ffffff',
-                    strokeWidth: 2.5,
-                    style: {
-                      filter: 'drop-shadow(0 2px 4px rgba(31,107,71,0.3))',
-                    },
-                  }}
+                <Bar
+                  dataKey="count"
+                  fill="url(#barGradient)"
+                  radius={[8, 8, 0, 0]}
+                  maxBarSize={36}
                 />
-              </AreaChart>
+              </BarChart>
             </ResponsiveContainer>
           ) : (
             <Box
@@ -174,7 +159,7 @@ export default function RevenueChart({ data, loading = false }) {
               }}
             >
               <Typography variant="body2" color="text.disabled">
-                No revenue data available
+                No quotation data available
               </Typography>
             </Box>
           )}

@@ -39,7 +39,7 @@ export default function BusinessNotificationsPage() {
           description="When customers interact with your business, you'll be notified here."
         />
       ) : (
-        <Card sx={{ borderRadius: 3 }}>
+        <Card sx={{ borderRadius: 1 }}>
           <List disablePadding>
             {notifications.map((notification, index) => {
               const isUnread = !notification.read;

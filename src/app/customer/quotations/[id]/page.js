@@ -1,25 +1,24 @@
 'use client';
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Box, Card, CardContent, Typography, Button, Grid, Divider, IconButton, Alert
+  Box, Typography, Button, IconButton
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
-import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import PrintIcon from '@mui/icons-material/Print';
 
 import { quotationService } from '@/services/quotationService';
+import { customerService } from '@/services/customerService';
 import { businessService } from '@/services/businessService';
-import { calculateQuotationTotals } from '@/utils/quotationCalculations';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { QUOTATION_STATUS } from '@/constants/statuses';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import StatusChip from '@/components/common/StatusChip';
-import QuotationTotals from '@/app/business/quotations/components/QuotationTotals';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
+import QuotationDocument from '@/components/quotation/QuotationDocument';
 
 export default function CustomerQuotationDetailPage({ params }) {
   const router = useRouter();
@@ -29,17 +28,23 @@ export default function CustomerQuotationDetailPage({ params }) {
   const { showSuccess, showError } = useSnackbar();
 
   const [quotation, setQuotation] = useState(null);
+  const [customer, setCustomer] = useState(null);
   const [business, setBusiness] = useState(null);
-  const [totals, setTotals] = useState(null);
   const [loading, setLoading] = useState(true);
   const [confirmAction, setConfirmAction] = useState(null);
+  const initRef = useRef(null);
 
   const fetchData = async () => {
     try {
+      setLoading(true);
       const quot = await quotationService.getQuotationById(id);
       setQuotation(quot);
-      setTotals(calculateQuotationTotals(quot));
-      const biz = await businessService.getBusinessById(quot.businessId).catch(() => null);
+
+      const [cust, biz] = await Promise.all([
+        customerService.getCustomerById(quot.customerId).catch(() => null),
+        businessService.getBusinessById(quot.businessId).catch(() => null),
+      ]);
+      setCustomer(cust);
       setBusiness(biz);
     } catch (err) {
       showError('Quotation not found');
@@ -50,7 +55,10 @@ export default function CustomerQuotationDetailPage({ params }) {
   };
 
   useEffect(() => {
-    if (id) fetchData();
+    if (id && !initRef.current) {
+      initRef.current = true;
+      fetchData();
+    }
   }, [id]);
 
   const handleStatusChange = async (status) => {
@@ -66,25 +74,26 @@ export default function CustomerQuotationDetailPage({ params }) {
   };
 
   if (loading) return <Typography sx={{ mt: 4 }}>Loading quotation...</Typography>;
-  if (!quotation) return null;
+  if (!quotation || !business || !customer) return null;
 
   const canRespond = [QUOTATION_STATUS.SENT, QUOTATION_STATUS.VIEWED, QUOTATION_STATUS.REVISED].includes(quotation.status);
+  const settings = quotation.settings || null;
 
   return (
     <Box>
       {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4, flexWrap: 'wrap' }}>
-        <IconButton onClick={() => router.push('/customer/quotations')} sx={{ bgcolor: 'background.paper' }}>
+      <Box className="no-print" sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 4, flexWrap: 'wrap' }}>
+        <IconButton onClick={() => router.push('/customer/quotations')} sx={{ bgcolor: 'background.paper', flexShrink: 0 }}>
           <ArrowBackIcon />
         </IconButton>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h5" fontWeight={700}>{quotation.quotationNumber}</Typography>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>{quotation.quotationNumber}</Typography>
           <Typography variant="body2" color="text.secondary">
             From <strong>{business?.name}</strong> • {formatDate(quotation.quotationDate)} • Valid until {formatDate(quotation.expiryDate)}
           </Typography>
         </Box>
         <StatusChip status={quotation.status} />
-        <Button startIcon={<PrintIcon />} onClick={() => window.print()} variant="outlined" size="small">
+        <Button startIcon={<PrintIcon />} onClick={() => window.print()} variant="outlined" size="small" sx={{ display: { xs: 'none', sm: 'flex' } }}>
           Print / PDF
         </Button>
         {canRespond && (
@@ -108,7 +117,7 @@ export default function CustomerQuotationDetailPage({ params }) {
               startIcon={<CheckCircleIcon />}
               onClick={() => setConfirmAction({
                 title: 'Accept Quotation',
-                message: `You are accepting ${quotation.quotationNumber} for ${formatCurrency(quotation.grandTotal)}. This confirms your intent to proceed.`,
+                message: `You are accepting ${quotation.quotationNumber}. This confirms your intent to proceed.`,
                 status: QUOTATION_STATUS.ACCEPTED,
                 color: 'success'
               })}
@@ -118,121 +127,26 @@ export default function CustomerQuotationDetailPage({ params }) {
           </>
         )}
         {quotation.status === QUOTATION_STATUS.ACCEPTED && (
-          <Alert severity="success" sx={{ borderRadius: 2 }}>You accepted this quotation.</Alert>
+          <Typography variant="body2" color="success.main" fontWeight={600}>You accepted this quotation.</Typography>
         )}
         {quotation.status === QUOTATION_STATUS.REJECTED && (
-          <Alert severity="error" sx={{ borderRadius: 2 }}>You rejected this quotation.</Alert>
+          <Typography variant="body2" color="error.main" fontWeight={600}>You rejected this quotation.</Typography>
         )}
       </Box>
 
-      <Grid container spacing={4}>
-        <Grid xs={12} lg={8}>
-          {/* Vendor & Customer Info */}
-          <Card sx={{ borderRadius: 3, mb: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Grid container spacing={4}>
-                <Grid xs={12} sm={6}>
-                  <Typography variant="subtitle2" fontWeight={700} color="text.secondary" mb={1}>FROM (VENDOR)</Typography>
-                  <Typography variant="body1" fontWeight={700}>{business?.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">{business?.email}</Typography>
-                  <Typography variant="body2" color="text.secondary">{business?.phone}</Typography>
-                  <Typography variant="body2" color="text.secondary">{business?.city}, {business?.country}</Typography>
-                </Grid>
-                <Grid xs={12} sm={6}>
-                  <Typography variant="subtitle2" fontWeight={700} color="text.secondary" mb={1}>TO</Typography>
-                  <Typography variant="body1" fontWeight={700}>{user?.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">{user?.company}</Typography>
-                  <Typography variant="body2" color="text.secondary">{user?.email}</Typography>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-
-          {/* Line Items */}
-          <Card sx={{ borderRadius: 3, mb: 3 }}>
-            <CardContent sx={{ p: 0 }}>
-              <Box sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={600}>Items</Typography>
-              </Box>
-              <Divider />
-              <Box sx={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#f8fafc' }}>
-                      {['Item', 'Qty', 'Unit Price', 'Discount', 'Tax', 'Total'].map(h => (
-                        <th key={h} style={{ padding: '12px 16px', textAlign: h === 'Item' ? 'left' : 'right', fontSize: '0.75rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(totals?.lineItems || quotation.items).map((item, i) => {
-                      const discountAmt = item.discount || 0;
-                      const taxAmt = item.tax || 0;
-                      const lineTotal = item.total || ((item.quantity * item.unitPrice) - discountAmt + taxAmt);
-                      return (
-                        <tr key={i} style={{ borderTop: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '12px 16px' }}>
-                            <Typography variant="body2" fontWeight={600}>{item.name}</Typography>
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                            <Typography variant="body2">{item.quantity}</Typography>
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                            <Typography variant="body2">{formatCurrency(item.unitPrice)}</Typography>
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                            <Typography variant="body2" color={discountAmt > 0 ? 'success.main' : 'text.secondary'}>
-                              {discountAmt > 0 ? `- ${formatCurrency(discountAmt)}` : '—'}
-                            </Typography>
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                            <Typography variant="body2">{formatCurrency(taxAmt)}</Typography>
-                          </td>
-                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                            <Typography variant="body2" fontWeight={700}>{formatCurrency(lineTotal)}</Typography>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </Box>
-            </CardContent>
-          </Card>
-
-          {(quotation.paymentTerms || quotation.terms) && (
-            <Card sx={{ borderRadius: 3 }}>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" fontWeight={600} mb={2}>Terms & Conditions</Typography>
-                {quotation.paymentTerms && (
-                  <Box mb={2}>
-                    <Typography variant="subtitle2" color="text.secondary" mb={0.5}>PAYMENT TERMS</Typography>
-                    <Typography variant="body2">{quotation.paymentTerms}</Typography>
-                  </Box>
-                )}
-                {quotation.terms && (
-                  <Box>
-                    <Typography variant="subtitle2" color="text.secondary" mb={0.5}>CONDITIONS</Typography>
-                    <Typography variant="body2">{quotation.terms}</Typography>
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          )}
-        </Grid>
-
-        {/* Right: Totals */}
-        <Grid xs={12} lg={4}>
-          <Card sx={{ borderRadius: 3, position: 'sticky', top: 80 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} mb={3}>Price Breakdown</Typography>
-              <QuotationTotals totals={totals} />
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      {/* Quotation Document — identical to business view */}
+      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+        <Box className="print-container">
+          <QuotationDocument
+            business={business}
+            customer={customer}
+            quotation={quotation}
+            settings={settings}
+            scale={1}
+            printMode={false}
+          />
+        </Box>
+      </Box>
 
       {confirmAction && (
         <ConfirmDialog

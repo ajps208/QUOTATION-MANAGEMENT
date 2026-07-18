@@ -106,18 +106,18 @@ export default function QuotationDetailPage({ params }) {
   return (
     <Box>
       {/* Header - Hidden during print */}
-      <Box className="no-print" sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4, flexWrap: 'wrap' }}>
-        <IconButton onClick={() => router.push('/business/quotations')} sx={{ bgcolor: 'background.paper' }}>
+      <Box className="no-print" sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 4, flexWrap: 'wrap' }}>
+        <IconButton onClick={() => router.push('/business/quotations')} sx={{ bgcolor: 'background.paper', flexShrink: 0 }}>
           <ArrowBackIcon />
         </IconButton>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h5" fontWeight={700}>{quotation.quotationNumber}</Typography>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>{quotation.quotationNumber}</Typography>
           <Typography variant="body2" color="text.secondary">
             Created {formatDate(quotation.createdAt)} • Expires {formatDate(quotation.expiryDate)}
           </Typography>
         </Box>
         <StatusChip status={quotation.status} />
-        <Button startIcon={<PrintIcon />} onClick={handlePrint} variant="outlined" size="small">
+        <Button startIcon={<PrintIcon />} onClick={handlePrint} variant="outlined" size="small" sx={{ display: { xs: 'none', sm: 'flex' } }}>
           Print / PDF
         </Button>
         {canSend && (

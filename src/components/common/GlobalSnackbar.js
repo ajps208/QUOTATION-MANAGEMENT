@@ -9,11 +9,26 @@ export default function GlobalSnackbar() {
   return (
     <Snackbar
       open={open}
-      autoHideDuration={6000}
+      autoHideDuration={5000}
       onClose={closeSnackbar}
       anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      sx={{
+        '& .MuiSnackbar-root': { bottom: { xs: 16, sm: 24 } },
+      }}
     >
-      <Alert onClose={closeSnackbar} severity={severity} variant="filled" sx={{ width: '100%' }}>
+      <Alert
+        onClose={closeSnackbar}
+        severity={severity}
+        variant="filled"
+        sx={{
+          width: '100%',
+          minWidth: 280,
+          borderRadius: 3,
+          fontWeight: 500,
+          fontSize: '0.875rem',
+          boxShadow: '0 8px 24px -4px rgba(0,0,0,0.12)',
+        }}
+      >
         {message}
       </Alert>
     </Snackbar>

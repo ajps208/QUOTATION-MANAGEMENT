@@ -1,23 +1,23 @@
-import { Card, CardHeader, CardContent, CardActions, Divider, Box } from '@mui/material';
+import { Card, CardHeader, CardContent, CardActions, Divider } from '@mui/material';
 
-export default function AppCard({ 
-  title, 
-  subtitle, 
-  action, 
-  children, 
+export default function AppCard({
+  title,
+  subtitle,
+  action,
+  children,
   footer,
   noPadding = false,
-  ...props 
+  ...props
 }) {
   return (
     <Card {...props}>
       {(title || subtitle || action) && (
         <>
-          <CardHeader 
-            title={title} 
-            subheader={subtitle} 
-            action={action} 
-            titleTypographyProps={{ variant: 'h6', fontWeight: 600 }}
+          <CardHeader
+            title={title}
+            subheader={subtitle}
+            action={action}
+            titleTypographyProps={{ variant: 'h6', fontWeight: 600, letterSpacing: '-0.005em' }}
           />
           <Divider />
         </>
@@ -28,7 +28,7 @@ export default function AppCard({
       {footer && (
         <>
           <Divider />
-          <CardActions sx={{ p: 2, justifyContent: 'flex-end', backgroundColor: 'background.default' }}>
+          <CardActions sx={{ p: { xs: 2, md: 3 }, justifyContent: 'flex-end' }}>
             {footer}
           </CardActions>
         </>

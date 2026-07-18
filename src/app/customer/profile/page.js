@@ -1,9 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Box, Card, CardContent, Typography, TextField, Button, Grid, Avatar } from '@mui/material';
+import { Box, Grid, Typography, Avatar } from '@mui/material';
+import SaveIcon from '@mui/icons-material/Save';
 import { useAuthStore } from '@/store/useAuthStore';
 import { authService } from '@/services/authService';
 import PageHeader from '@/components/common/PageHeader';
+import FormSection from '@/components/common/FormSection';
+import FormField from '@/components/common/FormField';
+import AppButton from '@/components/common/AppButton';
 import { useSnackbar } from '@/hooks/useSnackbar';
 
 export default function CustomerProfilePage() {
@@ -53,83 +57,103 @@ export default function CustomerProfilePage() {
         subtitle="Manage your personal and company information"
       />
 
-      <Grid container spacing={4}>
+      <Grid container spacing={{ xs: 3, md: 4 }}>
         <Grid xs={12} md={4}>
-          <Card sx={{ borderRadius: 3, textAlign: 'center' }}>
-            <CardContent sx={{ p: 4 }}>
-              <Avatar 
-                sx={{ width: 100, height: 100, mx: 'auto', mb: 2, bgcolor: 'primary.main', fontSize: '2.5rem' }}
+          <FormSection>
+            <Box sx={{ textAlign: 'center', py: 1 }}>
+              <Avatar
+                sx={{
+                  width: 96,
+                  height: 96,
+                  mx: 'auto',
+                  mb: 2,
+                  bgcolor: 'primary.main',
+                  fontSize: '2.5rem',
+                  fontWeight: 600,
+                  boxShadow: '0 4px 12px rgba(79,70,229,0.15)',
+                }}
               >
-                {user.avatar || 'U'}
+                {user.avatar || user.name?.charAt(0)?.toUpperCase() || 'U'}
               </Avatar>
-              <Typography variant="h6" fontWeight={700}>{user.name}</Typography>
-              <Typography variant="body2" color="text.secondary" mb={2}>{user.email}</Typography>
-              <Typography variant="body2">{user.bio}</Typography>
-            </CardContent>
-          </Card>
+              <Typography variant="h6" fontWeight={600} sx={{ letterSpacing: '-0.01em' }}>
+                {user.name}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, wordBreak: 'break-word' }}>
+                {user.email}
+              </Typography>
+              {user.bio && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, lineHeight: 1.6 }}>
+                  {user.bio}
+                </Typography>
+              )}
+            </Box>
+          </FormSection>
         </Grid>
         
         <Grid xs={12} md={8}>
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: 4 }}>
-              <Typography variant="h6" fontWeight={600} mb={3}>Edit Profile</Typography>
-              
-              <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                <Grid container spacing={2}>
-                  <Grid xs={12} sm={6}>
-                    <TextField 
-                      label="Full Name" 
-                      value={formData.name} 
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
-                      required 
-                      fullWidth 
-                    />
-                  </Grid>
-                  <Grid xs={12} sm={6}>
-                    <TextField 
-                      label="Email Address" 
-                      type="email" 
-                      value={formData.email} 
-                      disabled // Email usually can't be changed easily
-                      fullWidth 
-                    />
-                  </Grid>
-                  <Grid xs={12} sm={6}>
-                    <TextField 
-                      label="Phone Number" 
-                      value={formData.phone} 
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
-                      fullWidth 
-                    />
-                  </Grid>
-                  <Grid xs={12} sm={6}>
-                    <TextField 
-                      label="Company Name" 
-                      value={formData.company} 
-                      onChange={(e) => setFormData({ ...formData, company: e.target.value })} 
-                      fullWidth 
-                    />
-                  </Grid>
-                  <Grid xs={12}>
-                    <TextField 
-                      label="Bio / Description" 
-                      value={formData.bio} 
-                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })} 
-                      multiline 
-                      rows={4} 
-                      fullWidth 
-                    />
-                  </Grid>
+          <FormSection title="Edit Profile">
+            <Box component="form" onSubmit={handleSubmit}>
+              <Grid container spacing={2.5}>
+                <Grid xs={12} sm={6}>
+                  <FormField
+                    label="Full Name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                    placeholder="Your full name"
+                  />
                 </Grid>
-                
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <Button type="submit" variant="contained" disabled={loading} size="large">
-                    {loading ? 'Saving...' : 'Save Changes'}
-                  </Button>
-                </Box>
+                <Grid xs={12} sm={6}>
+                  <FormField
+                    label="Email Address"
+                    type="email"
+                    value={formData.email}
+                    disabled
+                    helperText="Contact support to change your email"
+                  />
+                </Grid>
+                <Grid xs={12} sm={6}>
+                  <FormField
+                    label="Phone Number"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="+91 98765 43210"
+                  />
+                </Grid>
+                <Grid xs={12} sm={6}>
+                  <FormField
+                    label="Company Name"
+                    value={formData.company}
+                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                    placeholder="Your company"
+                  />
+                </Grid>
+                <Grid xs={12}>
+                  <FormField
+                    label="Bio / Description"
+                    value={formData.bio}
+                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                    multiline
+                    rows={4}
+                    placeholder="Tell us about yourself..."
+                  />
+                </Grid>
+              </Grid>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 4, mt: 1 }}>
+                <AppButton
+                  type="submit"
+                  variant="contained"
+                  loading={loading}
+                  size="large"
+                  startIcon={!loading && <SaveIcon />}
+                  sx={{ minWidth: 160 }}
+                >
+                  {loading ? 'Saving...' : 'Save Changes'}
+                </AppButton>
               </Box>
-            </CardContent>
-          </Card>
+            </Box>
+          </FormSection>
         </Grid>
       </Grid>
     </Box>

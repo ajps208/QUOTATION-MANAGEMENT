@@ -2,6 +2,7 @@ import connectToDatabase from '@/lib/mongodb';
 import Quotation from '@/models/Quotation';
 import Activity from '@/models/Activity';
 import Notification from '@/models/Notification';
+import Business from '@/models/Business';
 import Customer from '@/models/Customer';
 import User from '@/models/User';
 import { QUOTATION_STATUS } from '@/constants/statuses';

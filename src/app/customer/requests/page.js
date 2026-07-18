@@ -61,12 +61,12 @@ export default function CustomerRequestsPage() {
           description="You have not submitted any quotation requests yet. Browse vendors to get started."
         />
       ) : (
-        <Grid container spacing={3}>
+        <Grid container spacing={{ xs: 2, md: 3 }}>
           {requests.map((req) => {
             const vendor = businesses[req.businessId];
             return (
               <Grid xs={12} key={req.id}>
-                <Card sx={{ borderRadius: 3 }}>
+                <Card sx={{ borderRadius: 1 }}>
                   <CardContent sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
                       <Box>

@@ -1,18 +1,20 @@
 'use client';
 
-import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useState, useEffect, useMemo, Suspense, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  Box, Grid, Card, CardContent, Typography, Button, TextField,
-  MenuItem, Select, FormControl, InputLabel, Divider, Accordion,
-  AccordionSummary, AccordionDetails, InputAdornment, IconButton,
-  Alert
+  Box, Grid, Typography, Button,
+  Divider, Accordion,
+  AccordionSummary, AccordionDetails, IconButton,
+  Alert, InputAdornment, Autocomplete, TextField, Chip, Stack
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
 import SendIcon from '@mui/icons-material/Send';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import LockIcon from '@mui/icons-material/Lock';
 
 import { useAuthStore } from '@/store/useAuthStore';
 import { customerService } from '@/services/customerService';
@@ -29,9 +31,12 @@ import DiscountRow from '../components/DiscountRow';
 import ChargeRow from '../components/ChargeRow';
 import QuotationTotals from '../components/QuotationTotals';
 import QuotationDocument from '@/components/quotation/QuotationDocument';
-import PageHeader from '@/components/common/PageHeader';
-import { formatDate } from '@/utils/formatters';
 import { quotationSettingsService } from '@/services/quotationSettingsService';
+import FormSection from '@/components/common/FormSection';
+import FormField from '@/components/common/FormField';
+import FormGrid from '@/components/common/FormGrid';
+import AppButton from '@/components/common/AppButton';
+import CustomerDialog from '@/app/business/customers/components/CustomerDialog';
 
 const emptyItem = () => ({
   productId: '',
@@ -57,8 +62,9 @@ function QuotationBuilderInner() {
   const [products, setProducts] = useState([]);
   const [settings, setSettings] = useState(null);
   const [sourceRequest, setSourceRequest] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
-  // Form state
   const resolvedCustomerIdParam = searchParams.get('customerId');
   const [customerId, setCustomerId] = useState(resolvedCustomerIdParam || '');
   const [quotationDate, setQuotationDate] = useState(new Date().toISOString().split('T')[0]);
@@ -76,25 +82,49 @@ function QuotationBuilderInner() {
   const [businessNotes, setBusinessNotes] = useState('');
   const [customerNotes, setCustomerNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
 
-  // Load initial data
+  const selectedCustomerObj = useMemo(() => {
+    if (!customerId) return null;
+    return customers.find(c => c.id === customerId) || null;
+  }, [customerId, customers]);
+
+  const initRef = useRef(false);
   useEffect(() => {
     const init = async () => {
       if (!user?.businessId) return;
+      if (initRef.current) return;
+      initRef.current = true;
+
+      setLoading(true);
+      setLoadError(null);
       try {
-        const [biz, custs, prods, sets] = await Promise.all([
+        let biz, custs, prods, sets;
+        const results = await Promise.allSettled([
           businessService.getBusinessById(user.businessId),
           customerService.getCustomers(user.businessId),
           productService.getProducts(user.businessId),
           quotationSettingsService.getSettingsByBusiness(user.businessId),
         ]);
-        setBusiness(biz);
-        setCustomers(custs);
-        setProducts(prods);
-        setSettings(sets);
 
-        // Pre-fill from request if requestId is given
-        if (requestId) {
+        const errors = [];
+        [biz, custs, prods, sets] = results.map((r, i) => {
+          if (r.status === 'fulfilled') return r.value;
+          const labels = ['business', 'customers', 'products', 'settings'];
+          errors.push(labels[i]);
+          return null;
+        });
+
+        if (errors.length === 4) {
+          throw new Error('Failed to load data');
+        }
+
+        setBusiness(biz || null);
+        setCustomers(custs || []);
+        setProducts(prods || []);
+        setSettings(sets || null);
+
+        if (requestId && prods) {
           const req = await quotationRequestService.getRequestById(requestId);
           setSourceRequest(req);
           setCustomerNotes(req.generalNote || '');
@@ -105,7 +135,7 @@ function QuotationBuilderInner() {
               productId: ri.productId,
               name: ri.name,
               quantity: ri.quantity,
-              unitPrice: prod?.unitPrice || 0,
+              unitPrice: prod?.basePrice || 0,
               taxPercent: prod?.taxPercent || 18,
               unit: prod?.unit || 'Item',
               discountType: DISCOUNT_TYPE.NONE,
@@ -113,20 +143,21 @@ function QuotationBuilderInner() {
             };
           });
           setItems(prefilledItems.length > 0 ? prefilledItems : [emptyItem()]);
-          setPaymentTerms(biz.paymentTerms || '');
+          setPaymentTerms(biz?.paymentTerms || '');
           
           if (resolvedCustomerIdParam) {
             setCustomerId(resolvedCustomerIdParam);
           }
         }
       } catch (err) {
-        showError('Failed to load data for quotation builder');
+        setLoadError(err.message || 'Failed to load data for quotation builder');
+      } finally {
+        setLoading(false);
       }
     };
     init();
-  }, [user, requestId]);
+  }, [user, requestId, resolvedCustomerIdParam]);
 
-  // Live calculation
   const totals = useMemo(() => {
     return calculateQuotationTotals({ items, overallDiscount, specialDiscounts, additionalCharges });
   }, [items, overallDiscount, specialDiscounts, additionalCharges]);
@@ -138,6 +169,19 @@ function QuotationBuilderInner() {
     setItems(prev => prev.filter((_, i) => i !== index));
   };
   const handleAddItem = () => setItems(prev => [...prev, emptyItem()]);
+
+  const handleSaveCustomer = async (formData) => {
+    try {
+      const newCustomer = await customerService.createCustomer({ ...formData, businessId: user.businessId });
+      showSuccess('Customer created successfully');
+      const updatedCustomers = await customerService.getCustomers(user.businessId);
+      setCustomers(updatedCustomers);
+      setCustomerId(newCustomer.id);
+      setCustomerDialogOpen(false);
+    } catch (err) {
+      showError('Failed to create customer');
+    }
+  };
 
   const handleSpecialDiscountUpdate = (index, updated) => {
     setSpecialDiscounts(prev => prev.map((d, i) => i === index ? updated : d));
@@ -156,6 +200,8 @@ function QuotationBuilderInner() {
   const buildPayload = (status) => ({
     businessId: user.businessId,
     customerId,
+    userId: user.id,
+    userName: user.name,
     requestId: requestId || null,
     quotationDate: new Date(quotationDate).toISOString(),
     expiryDate: new Date(expiryDate).toISOString(),
@@ -169,6 +215,7 @@ function QuotationBuilderInner() {
     customerNotes,
     status,
     prefix: business?.quotationPrefix || 'QT',
+    settings: settings || null,
   });
 
   const handleSave = async (status = QUOTATION_STATUS.DRAFT) => {
@@ -187,151 +234,266 @@ function QuotationBuilderInner() {
   };
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 5 }}>
-        <IconButton onClick={() => router.back()} sx={{ bgcolor: 'background.paper' }}>
+    <Box sx={{ overflow: 'hidden' }}>
+      {loading && (
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
+          <Typography color="text.secondary">Loading quotation builder...</Typography>
+        </Box>
+      )}
+
+      {loadError && !loading && (
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+          {loadError}
+        </Alert>
+      )}
+
+      {!loading && !loadError && (<>
+      {/* Header */}
+      <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: { xs: 3, md: 4 }, flexWrap: 'wrap' }}>
+        <IconButton
+          onClick={() => router.back()}
+          sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', flexShrink: 0 }}
+        >
           <ArrowBackIcon />
         </IconButton>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h5" fontWeight={700}>New Quotation</Typography>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, letterSpacing: '-0.02em' }}>
+            New Quotation
+          </Typography>
           {sourceRequest && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
               Based on request: <strong>{sourceRequest.id}</strong>
             </Typography>
           )}
         </Box>
-        <Button
-          variant="outlined"
-          startIcon={<SaveIcon />}
-          onClick={() => handleSave(QUOTATION_STATUS.DRAFT)}
-          disabled={saving}
-        >
-          Save Draft
-        </Button>
-        <Button
-          variant="contained"
-          startIcon={<SendIcon />}
-          onClick={() => handleSave(QUOTATION_STATUS.SENT)}
-          disabled={saving}
-        >
-          {saving ? 'Saving...' : 'Send to Customer'}
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1.5, width: { xs: '100%', sm: 'auto' } }}>
+          <AppButton
+            variant="outlined"
+            startIcon={<SaveIcon />}
+            onClick={() => handleSave(QUOTATION_STATUS.DRAFT)}
+            disabled={saving}
+            sx={{ flex: { xs: 1, sm: 'none' } }}
+          >
+            Save Draft
+          </AppButton>
+          <AppButton
+            variant="contained"
+            startIcon={<SendIcon />}
+            onClick={() => handleSave(QUOTATION_STATUS.SENT)}
+            disabled={saving}
+            loading={saving}
+            sx={{ flex: { xs: 1, sm: 'none' } }}
+          >
+            {saving ? 'Saving...' : 'Send to Customer'}
+          </AppButton>
+        </Box>
       </Box>
 
-      <Grid container spacing={4}>
-        {/* Main Builder */}
+      <Grid container spacing={{ xs: 3, md: 4 }}>
+        {/* Main Builder Column */}
         <Grid xs={12} lg={8}>
 
           {/* Customer & Dates */}
-          <Card sx={{ borderRadius: 3, mb: 5 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} mb={2}>Quotation Details</Typography>
-              <Divider sx={{ mb: 4 }} />
-              <Grid container spacing={4}>
-                <Grid xs={12}>
-                  {requestId && customerId ? (
-                    <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
-                      <Typography variant="caption" color="text.secondary" display="block">Customer (Locked to Request)</Typography>
+          <FormSection
+            title="Customer Details"
+            description={requestId ? "Customer is assigned from the request" : "Select or add a customer for this quotation"}
+            sx={{ mb: { xs: 3, md: 4 } }}
+          >
+            <FormGrid spacing={2.5}>
+              {requestId && customerId ? (
+                <Box sx={{
+                  width: '100%',
+                  p: 2.5,
+                  bgcolor: '#F8FAFC',
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: '#E2E8F0',
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                    <LockIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                      Customer (Locked to Request)
+                    </Typography>
+                  </Box>
+                  {selectedCustomerObj ? (
+                    <Box>
                       <Typography variant="body1" fontWeight={600}>
-                        {customers.find(c => c.id === customerId)?.name || 'Loading...'}
+                        {selectedCustomerObj.name}
                       </Typography>
+                      {selectedCustomerObj.companyName && (
+                        <Typography variant="body2" color="text.secondary">{selectedCustomerObj.companyName}</Typography>
+                      )}
+                      <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap', gap: 1 }}>
+                        {selectedCustomerObj.email && <Chip label={selectedCustomerObj.email} size="small" variant="outlined" />}
+                        {selectedCustomerObj.phone && <Chip label={selectedCustomerObj.phone} size="small" variant="outlined" />}
+                        {selectedCustomerObj.taxNumber && <Chip label={`GST: ${selectedCustomerObj.taxNumber}`} size="small" variant="outlined" />}
+                      </Stack>
+                      {(selectedCustomerObj.billingAddress || selectedCustomerObj.city || selectedCustomerObj.state) && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, lineHeight: 1.6 }}>
+                          {[selectedCustomerObj.billingAddress, selectedCustomerObj.city, selectedCustomerObj.state, selectedCustomerObj.postalCode].filter(Boolean).join(', ')}
+                        </Typography>
+                      )}
                     </Box>
                   ) : (
-                    <FormControl fullWidth required>
-                      <InputLabel>Customer</InputLabel>
-                      <Select
-                        value={customerId}
-                        label="Customer"
-                        onChange={(e) => setCustomerId(e.target.value)}
-                      >
-                        {customers.map(c => (
-                          <MenuItem key={c.id} value={c.id}>{c.name} ({c.companyName})</MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+                    <Typography variant="body1" fontWeight={600}>Loading customer...</Typography>
                   )}
-                </Grid>
-                <Grid xs={12} sm={6}>
-                  <TextField
-                    label="Quotation Date"
-                    type="date"
-                    value={quotationDate}
-                    onChange={(e) => setQuotationDate(e.target.value)}
-                    fullWidth
-                    slotProps={{ inputLabel: { shrink: true } }}
-                  />
-                </Grid>
-                <Grid xs={12} sm={6}>
-                  <TextField
-                    label="Expiry Date"
-                    type="date"
-                    value={expiryDate}
-                    onChange={(e) => setExpiryDate(e.target.value)}
-                    fullWidth
-                    slotProps={{ inputLabel: { shrink: true } }}
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
+                </Box>
+              ) : (
+                <Box sx={{ width: '100%' }}>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                    <Box sx={{ flex: 1 }}>
+                      <Autocomplete
+                        options={customers}
+                        getOptionLabel={(option) => option.name ? `${option.name}${option.companyName ? ` (${option.companyName})` : ''}` : ''}
+                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                        value={selectedCustomerObj}
+                        onChange={(e, newValue) => {
+                          setCustomerId(newValue?.id || '');
+                        }}
+                        renderOption={(props, option) => (
+                          <li {...props} key={option.id}>
+                            <Box>
+                              <Typography variant="body2" fontWeight={500}>{option.name}</Typography>
+                              {option.companyName && (
+                                <Typography variant="caption" color="text.secondary">{option.companyName}</Typography>
+                              )}
+                            </Box>
+                          </li>
+                        )}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Search Customer"
+                            placeholder="Type to search..."
+                            required={!customerId}
+                          />
+                        )}
+                        fullWidth
+                      />
+                    </Box>
+                    <AppButton
+                      variant="outlined"
+                      startIcon={<PersonAddIcon />}
+                      onClick={() => setCustomerDialogOpen(true)}
+                      sx={{ flexShrink: 0, mt: '2px', height: 56 }}
+                    >
+                      Add
+                    </AppButton>
+                  </Box>
+                  {selectedCustomerObj && (
+                    <Box sx={{
+                      mt: 2,
+                      p: 2.5,
+                      bgcolor: '#F8FAFC',
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: '#E2E8F0',
+                    }}>
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: '0.6875rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, mb: 1.5 }}>
+                        Customer Details
+                      </Typography>
+                      <Box>
+                        <Typography variant="body1" fontWeight={600}>{selectedCustomerObj.name}</Typography>
+                        {selectedCustomerObj.companyName && (
+                          <Typography variant="body2" color="text.secondary">{selectedCustomerObj.companyName}</Typography>
+                        )}
+                        <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', gap: 1 }}>
+                          {selectedCustomerObj.email && <Chip label={selectedCustomerObj.email} size="small" variant="outlined" />}
+                          {selectedCustomerObj.phone && <Chip label={selectedCustomerObj.phone} size="small" variant="outlined" />}
+                          {selectedCustomerObj.taxNumber && <Chip label={`GST: ${selectedCustomerObj.taxNumber}`} size="small" variant="outlined" />}
+                        </Stack>
+                        {(selectedCustomerObj.billingAddress || selectedCustomerObj.city || selectedCustomerObj.state) && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, lineHeight: 1.6 }}>
+                            {[selectedCustomerObj.billingAddress, selectedCustomerObj.city, selectedCustomerObj.state, selectedCustomerObj.postalCode].filter(Boolean).join(', ')}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+              )}
+              <FormField
+                xs={12} sm={6}
+                label="Quotation Date"
+                type="date"
+                value={quotationDate}
+                onChange={(e) => setQuotationDate(e.target.value)}
+                inputLabelProps={{ shrink: true }}
+              />
+              <FormField
+                xs={12} sm={6}
+                label="Expiry Date"
+                type="date"
+                value={expiryDate}
+                onChange={(e) => setExpiryDate(e.target.value)}
+                inputLabelProps={{ shrink: true }}
+              />
+            </FormGrid>
+          </FormSection>
 
           {/* Line Items */}
-          <Card sx={{ borderRadius: 3, mb: 5 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" fontWeight={600}>Line Items</Typography>
-                <Button startIcon={<AddIcon />} onClick={handleAddItem} variant="outlined">
-                  Add Item
-                </Button>
-              </Box>
-              <Divider sx={{ mb: 4 }} />
+          <FormSection
+            title="Line Items"
+            description="Add products or services to this quotation"
+            sx={{ mb: { xs: 3, md: 4 } }}
+          >
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+              <AppButton startIcon={<AddIcon />} onClick={handleAddItem} variant="outlined" size="small">
+                Add Item
+              </AppButton>
+            </Box>
 
-              {items.length === 0 ? (
-                <Alert severity="info">Add at least one item to the quotation.</Alert>
-              ) : (
-                items.map((item, index) => (
-                  <LineItemRow
-                    key={index}
-                    item={item}
-                    index={index}
-                    products={products}
-                    onUpdate={handleItemUpdate}
-                    onRemove={handleItemRemove}
-                  />
-                ))
-              )}
-            </CardContent>
-          </Card>
+            {items.length === 0 ? (
+              <Alert severity="info" sx={{ borderRadius: 2, fontSize: '0.875rem' }}>
+                Add at least one item to the quotation.
+              </Alert>
+            ) : (
+              items.map((item, index) => (
+                <LineItemRow
+                  key={index}
+                  item={item}
+                  index={index}
+                  products={products}
+                  onUpdate={handleItemUpdate}
+                  onRemove={handleItemRemove}
+                />
+              ))
+            )}
+          </FormSection>
 
           {/* Discounts & Charges */}
-          <Card sx={{ borderRadius: 3, mb: 5 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} mb={2}>Discounts & Additional Charges</Typography>
-              <Divider sx={{ mb: 4 }} />
-
-              {/* Overall Discount */}
-              <Typography variant="subtitle2" fontWeight={600} mb={1} color="text.secondary">OVERALL DISCOUNT</Typography>
-              <Box sx={{ display: 'flex', gap: 2, mb: 3,mt: 2 }}>
-                <FormControl size="small" sx={{ width: 180 }}>
-                  <InputLabel>Type</InputLabel>
-                  <Select
-                    value={overallDiscount.type}
-                    label="Type"
-                    onChange={(e) => setOverallDiscount(prev => ({ ...prev, type: e.target.value }))}
-                  >
-                    <MenuItem value={DISCOUNT_TYPE.NONE}>None</MenuItem>
-                    <MenuItem value={DISCOUNT_TYPE.PERCENTAGE}>Percentage (%)</MenuItem>
-                    <MenuItem value={DISCOUNT_TYPE.FIXED}>Fixed Amount (₹)</MenuItem>
-                  </Select>
-                </FormControl>
+          <FormSection
+            title="Discounts & Additional Charges"
+            description="Apply discounts and add extra charges"
+            sx={{ mb: { xs: 3, md: 4 } }}
+          >
+            {/* Overall Discount */}
+            <Box>
+              <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.6875rem', display: 'block', mb: 1.5 }}>
+                Overall Discount
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <FormField
+                  select
+                  label="Discount Type"
+                  value={overallDiscount.type}
+                  onChange={(e) => setOverallDiscount(prev => ({ ...prev, type: e.target.value }))}
+                  size="small"
+                  sx={{ minWidth: 180, flex: { xs: '1 1 100%', sm: '0 1 auto' } }}
+                  options={[
+                    { value: DISCOUNT_TYPE.NONE, label: 'No Discount' },
+                    { value: DISCOUNT_TYPE.PERCENTAGE, label: 'Percentage (%)' },
+                    { value: DISCOUNT_TYPE.FIXED, label: 'Fixed Amount (₹)' },
+                  ]}
+                />
                 {overallDiscount.type !== DISCOUNT_TYPE.NONE && (
-                  <TextField
+                  <FormField
                     label="Value"
                     type="number"
                     value={overallDiscount.value}
                     onChange={(e) => setOverallDiscount(prev => ({ ...prev, value: Number(e.target.value) }))}
                     size="small"
-                    sx={{ width: 130 }}
+                    sx={{ width: 140, flex: { xs: '1 1 100%', sm: '0 1 auto' } }}
                     slotProps={{
                       input: {
                         endAdornment: (
@@ -344,99 +506,102 @@ function QuotationBuilderInner() {
                   />
                 )}
               </Box>
+            </Box>
 
-              {/* Special Discounts */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle2" fontWeight={600} color="text.secondary">SPECIAL DISCOUNTS</Typography>
-                <Button
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={() => setSpecialDiscounts(prev => [...prev, { name: '', type: DISCOUNT_TYPE.PERCENTAGE, value: 0 }])}
-                >
-                  Add
-                </Button>
-              </Box>
-              {specialDiscounts.map((d, i) => (
-                <DiscountRow key={i} discount={d} index={i} onUpdate={handleSpecialDiscountUpdate} onRemove={handleSpecialDiscountRemove} />
-              ))}
+            <Divider sx={{ my: 1 }} />
 
-              <Divider sx={{ my: 3 }} />
+            {/* Special Discounts */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.6875rem' }}>
+                Special Discounts
+              </Typography>
+              <AppButton
+                size="small"
+                startIcon={<AddIcon />}
+                variant="text"
+                onClick={() => setSpecialDiscounts(prev => [...prev, { name: '', type: DISCOUNT_TYPE.PERCENTAGE, value: 0 }])}
+              >
+                Add
+              </AppButton>
+            </Box>
+            {specialDiscounts.map((d, i) => (
+              <DiscountRow key={i} discount={d} index={i} onUpdate={handleSpecialDiscountUpdate} onRemove={handleSpecialDiscountRemove} />
+            ))}
 
-              {/* Additional Charges */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle2" fontWeight={600} color="text.secondary">ADDITIONAL CHARGES</Typography>
-                <Button
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={() => setAdditionalCharges(prev => [...prev, { name: '', amount: 0, taxable: false, taxPercent: 18 }])}
-                >
-                  Add
-                </Button>
-              </Box>
-              {additionalCharges.map((c, i) => (
-                <ChargeRow key={i} charge={c} index={i} onUpdate={handleChargeUpdate} onRemove={handleChargeRemove} />
-              ))}
-            </CardContent>
-          </Card>
+            <Divider sx={{ my: 1 }} />
+
+            {/* Additional Charges */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '0.6875rem' }}>
+                Additional Charges
+              </Typography>
+              <AppButton
+                size="small"
+                startIcon={<AddIcon />}
+                variant="text"
+                onClick={() => setAdditionalCharges(prev => [...prev, { name: '', amount: 0, taxable: false, taxPercent: 18 }])}
+              >
+                Add
+              </AppButton>
+            </Box>
+            {additionalCharges.map((c, i) => (
+              <ChargeRow key={i} charge={c} index={i} onUpdate={handleChargeUpdate} onRemove={handleChargeRemove} />
+            ))}
+          </FormSection>
 
           {/* Terms & Notes */}
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} mb={2}>Terms & Notes</Typography>
-              <Divider sx={{ mb: 4 }} />
-              <Grid container spacing={4}>
-                <Grid xs={12}>
-                  <TextField
-                    label="Payment Terms"
-                    value={paymentTerms}
-                    onChange={(e) => setPaymentTerms(e.target.value)}
-                    fullWidth
-                    placeholder="e.g., 50% advance, 50% on delivery"
-                  />
-                </Grid>
-                <Grid xs={12}>
-                  <TextField
-                    label="Terms & Conditions"
-                    value={terms}
-                    onChange={(e) => setTerms(e.target.value)}
-                    multiline
-                    rows={3}
-                    fullWidth
-                    placeholder="Valid for 30 days. Subject to applicable taxes..."
-                  />
-                </Grid>
-                <Grid xs={12} sm={6}>
-                  <TextField
-                    label="Internal Notes (not visible to customer)"
-                    value={businessNotes}
-                    onChange={(e) => setBusinessNotes(e.target.value)}
-                    multiline
-                    rows={3}
-                    fullWidth
-                  />
-                </Grid>
-                <Grid xs={12} sm={6}>
-                  <TextField
-                    label="Customer Note"
-                    value={customerNotes}
-                    onChange={(e) => setCustomerNotes(e.target.value)}
-                    multiline
-                    rows={3}
-                    fullWidth
-                  />
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
+          <FormSection
+            title="Terms & Notes"
+            description="Add payment terms, conditions, and notes"
+            sx={{ mb: { xs: 3, md: 4 } }}
+          >
+            <FormGrid spacing={2.5}>
+              <FormField
+                xs={12}
+                label="Payment Terms"
+                value={paymentTerms}
+                onChange={(e) => setPaymentTerms(e.target.value)}
+                placeholder="e.g., 50% advance, 50% on delivery"
+              />
+              <FormField
+                xs={12}
+                label="Terms & Conditions"
+                value={terms}
+                onChange={(e) => setTerms(e.target.value)}
+                multiline
+                rows={3}
+                placeholder="Valid for 30 days. Subject to applicable taxes..."
+              />
+              <FormField
+                xs={12} sm={6}
+                label="Internal Notes"
+                value={businessNotes}
+                onChange={(e) => setBusinessNotes(e.target.value)}
+                multiline
+                rows={3}
+                placeholder="Not visible to customer"
+                helperText="Not visible to customer"
+              />
+              <FormField
+                xs={12} sm={6}
+                label="Customer Note"
+                value={customerNotes}
+                onChange={(e) => setCustomerNotes(e.target.value)}
+                multiline
+                rows={3}
+                placeholder="Message for the customer..."
+              />
+            </FormGrid>
+          </FormSection>
 
           {/* Live Preview Accordion */}
           {settings && customers.find(c => c.id === customerId) && (
-            <Accordion sx={{ borderRadius: 3, mb: 5, overflow: 'hidden', '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: 'grey.50' }}>
+            <Accordion sx={{ borderRadius: 2, mb: { xs: 3, md: 4 }, overflow: 'hidden', '&:before': { display: 'none' }, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#F8FAFC' }}>
                 <Typography variant="h6" fontWeight={600}>Live Document Preview</Typography>
               </AccordionSummary>
-              <AccordionDetails sx={{ bgcolor: 'grey.200', p: 4, display: 'flex', justifyContent: 'center', overflowX: 'auto' }}>
-                <Box sx={{ transform: 'scale(0.8)', transformOrigin: 'top center' }}>
+              <AccordionDetails sx={{ bgcolor: '#F1F5F9', p: { xs: 2, md: 4 }, display: 'flex', justifyContent: 'center', overflowX: 'auto' }}>
+                <Box sx={{ minWidth: 0 }}>
                   <QuotationDocument
                     business={business}
                     customer={customers.find(c => c.id === customerId) || {}}
@@ -463,21 +628,35 @@ function QuotationBuilderInner() {
 
         {/* Right Sidebar: Totals */}
         <Grid xs={12} lg={4}>
-          <Card sx={{ borderRadius: 3, position: 'sticky', top: 80 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} mb={3}>Price Summary</Typography>
-              <QuotationTotals totals={totals} />
-            </CardContent>
-          </Card>
+          <FormSection
+            title="Price Summary"
+            sx={{ position: { lg: 'sticky' }, top: { lg: 80 } }}
+          >
+            <QuotationTotals totals={totals} />
+          </FormSection>
         </Grid>
       </Grid>
+
+      {!requestId && (
+        <CustomerDialog
+          open={customerDialogOpen}
+          onClose={() => setCustomerDialogOpen(false)}
+          onSave={handleSaveCustomer}
+          customer={null}
+        />
+      )}
+      </>)}
     </Box>
   );
 }
 
 export default function QuotationBuilderPage() {
   return (
-    <Suspense fallback={<Typography sx={{ mt: 4 }}>Loading builder...</Typography>}>
+    <Suspense fallback={
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
+        <Typography color="text.secondary">Loading builder...</Typography>
+      </Box>
+    }>
       <QuotationBuilderInner />
     </Suspense>
   );

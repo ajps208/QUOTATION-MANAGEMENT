@@ -99,7 +99,7 @@ export default function CategoriesPage() {
 
   const columns = [
     { field: 'name', label: 'Name' },
-    { field: 'description', label: 'Description' },
+    { field: 'description', label: 'Description', hideOnMobile: true },
     { 
       field: 'status', 
       label: 'Status',
@@ -108,6 +108,7 @@ export default function CategoriesPage() {
     { 
       field: 'createdAt', 
       label: 'Created',
+      hideOnMobile: true,
       render: (row) => formatDate(row.createdAt)
     },
     {
@@ -117,10 +118,10 @@ export default function CategoriesPage() {
       width: 120,
       render: (row) => (
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <IconButton onClick={() => handleEdit(row)} size="small" color="primary">
+          <IconButton onClick={(e) => { e.stopPropagation(); handleEdit(row); }} size="small" color="primary">
             <EditIcon fontSize="small" />
           </IconButton>
-          <IconButton onClick={() => handleDeleteClick(row)} size="small" color="error">
+          <IconButton onClick={(e) => { e.stopPropagation(); handleDeleteClick(row); }} size="small" color="error">
             <DeleteIcon fontSize="small" />
           </IconButton>
         </Box>
@@ -150,6 +151,7 @@ export default function CategoriesPage() {
         <AppTable 
           columns={columns}
           data={filteredCategories}
+          onRowClick={(row) => handleEdit(row)}
           emptyState={
             <EmptyState 
               title="No categories found" 

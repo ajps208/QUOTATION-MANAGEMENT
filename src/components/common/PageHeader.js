@@ -1,23 +1,28 @@
-import { Box, Button, Divider, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
+import AppButton from './AppButton';
 
 export default function PageHeader({ title, subtitle, actionLabel, onAction, actionIcon }) {
   return (
-    <Box sx={{ mb: 5 }}>
+    <Box sx={{ mb: { xs: 3, md: 4 } }}>
       <Box
         sx={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-start',
-          gap: 3,
+          gap: 2,
           flexWrap: 'wrap',
-          mb: subtitle ? 0 : 0,
         }}
       >
-        <Box>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography
-            variant="h4"
-            fontWeight={600}
-            sx={{ letterSpacing: '-0.01em', color: 'text.primary', lineHeight: 1.2 }}
+            variant="h3"
+            fontWeight={700}
+            sx={{
+              letterSpacing: '-0.025em',
+              color: 'text.primary',
+              lineHeight: 1.3,
+              fontSize: { xs: '1.5rem', sm: '1.875rem', md: '2.25rem' },
+            }}
           >
             {title}
           </Typography>
@@ -25,24 +30,23 @@ export default function PageHeader({ title, subtitle, actionLabel, onAction, act
             <Typography
               variant="body1"
               color="text.secondary"
-              sx={{ mt: 1, lineHeight: 1.6, maxWidth: 600 }}
+              sx={{ mt: 0.75, lineHeight: 1.6, maxWidth: 560 }}
             >
               {subtitle}
             </Typography>
           )}
         </Box>
         {actionLabel && (
-          <Button
+          <AppButton
             variant="contained"
             startIcon={actionIcon}
             onClick={onAction}
-            sx={{ flexShrink: 0, mt: 0.5 }}
+            sx={{ flexShrink: 0, mt: 0.25 }}
           >
             {actionLabel}
-          </Button>
+          </AppButton>
         )}
       </Box>
-      <Divider sx={{ mt: 4 }} />
     </Box>
   );
 }

@@ -1,10 +1,6 @@
+import { Box, Typography, Divider } from '@mui/material';
 import { formatCurrency } from '@/utils/formatters';
-import { DISCOUNT_TYPE } from '@/constants/discountTypes';
 
-/**
- * Reusable Quotation Totals Summary component.
- * Accepts a `totals` object from calculateQuotationTotals().
- */
 export default function QuotationTotals({ totals, currency = 'INR' }) {
   if (!totals) return null;
 
@@ -28,26 +24,22 @@ export default function QuotationTotals({ totals, currency = 'INR' }) {
   ].filter(Boolean);
 
   return (
-    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-      <tbody>
-        {rows.map((row, i) => (
-          <tr key={i}>
-            <td style={{ padding: '6px 0', color: '#475569', fontSize: '0.875rem' }}>{row.label}</td>
-            <td style={{ padding: '6px 0', textAlign: 'right', fontWeight: 500, fontSize: '0.875rem', color: row.color || 'inherit' }}>
-              {row.value < 0 ? `- ${formatCurrency(Math.abs(row.value))}` : formatCurrency(row.value)}
-            </td>
-          </tr>
-        ))}
-        <tr>
-          <td colSpan={2} style={{ borderTop: '2px solid #e2e8f0', paddingTop: 8 }} />
-        </tr>
-        <tr>
-          <td style={{ fontWeight: 700, fontSize: '1rem' }}>Grand Total</td>
-          <td style={{ textAlign: 'right', fontWeight: 700, fontSize: '1.25rem', color: '#4f46e5' }}>
-            {formatCurrency(grandTotal)}
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <Box>
+      {rows.map((row, i) => (
+        <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1.5 }}>
+          <Typography variant="body2" color="text.secondary">{row.label}</Typography>
+          <Typography variant="body2" fontWeight={500} color={row.color || 'text.primary'}>
+            {row.value < 0 ? `- ${formatCurrency(Math.abs(row.value))}` : formatCurrency(row.value)}
+          </Typography>
+        </Box>
+      ))}
+      <Divider sx={{ my: 2 }} />
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="subtitle1" fontWeight={700}>Grand Total</Typography>
+        <Typography variant="h6" fontWeight={700} color="primary.main">
+          {formatCurrency(grandTotal)}
+        </Typography>
+      </Box>
+    </Box>
   );
 }

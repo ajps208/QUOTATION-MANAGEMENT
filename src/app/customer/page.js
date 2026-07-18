@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Box, Grid, Typography, Card, CardContent, Divider, Button } from '@mui/material';
+import { Box, Grid, Typography, Card, CardContent, Button } from '@mui/material';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import StoreIcon from '@mui/icons-material/Store';
@@ -27,8 +27,8 @@ export default function CustomerDashboard() {
       if (!user?.id) return;
       try {
         const [quotations, businesses] = await Promise.all([
-          quotationService.getQuotationsByCustomer(user.id),
-          businessService.getBusinesses(), // For a real app, only fetch connected vendors
+          quotationService.getQuotationsByUser(user.id),
+          businessService.getBusinesses(),
         ]);
 
         const active = quotations.filter(q => 
@@ -37,13 +37,12 @@ export default function CustomerDashboard() {
         
         const accepted = quotations.filter(q => q.status === QUOTATION_STATUS.ACCEPTED).length;
 
-        // Unique business IDs from quotations
         const uniqueVendors = new Set(quotations.map(q => q.businessId)).size;
 
         setStats({
           activeQuotations: active,
           acceptedQuotations: accepted,
-          vendors: uniqueVendors || 1, // Just to show some mock data if empty
+          vendors: uniqueVendors || 1,
         });
 
       } catch (error) {
@@ -63,11 +62,11 @@ export default function CustomerDashboard() {
         subtitle="Manage your requested quotations and interact with vendors."
       />
 
-      <Grid container spacing={4} sx={{ mb: 6 }}>
+      <Grid container spacing={{ xs: 2, md: 4 }} sx={{ mb: { xs: 3, md: 6 } }}>
         <Grid xs={12} sm={4}>
-          <Card sx={{ borderRadius: 3, height: '100%' }}>
+          <Card sx={{ height: '100%' }}>
             <CardContent sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'primary.light', color: 'primary.dark' }}>
+              <Box sx={{ p: 2, borderRadius: 3, bgcolor: 'rgba(31,107,71,0.08)', color: '#1F6B47' }}>
                 <DescriptionIcon fontSize="large" />
               </Box>
               <Box>
@@ -78,9 +77,9 @@ export default function CustomerDashboard() {
           </Card>
         </Grid>
         <Grid xs={12} sm={4}>
-          <Card sx={{ borderRadius: 3, height: '100%' }}>
+          <Card sx={{ height: '100%' }}>
             <CardContent sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'success.light', color: 'success.dark' }}>
+              <Box sx={{ p: 2, borderRadius: 3, bgcolor: 'rgba(31,107,71,0.08)', color: '#1F6B47' }}>
                 <CheckCircleIcon fontSize="large" />
               </Box>
               <Box>
@@ -91,9 +90,9 @@ export default function CustomerDashboard() {
           </Card>
         </Grid>
         <Grid xs={12} sm={4}>
-          <Card sx={{ borderRadius: 3, height: '100%' }}>
+          <Card sx={{ height: '100%' }}>
             <CardContent sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box sx={{ p: 2, borderRadius: 2, bgcolor: 'info.light', color: 'info.dark' }}>
+              <Box sx={{ p: 2, borderRadius: 3, bgcolor: 'rgba(95,107,98,0.08)', color: '#5F6B62' }}>
                 <StoreIcon fontSize="large" />
               </Box>
               <Box>
@@ -105,13 +104,13 @@ export default function CustomerDashboard() {
         </Grid>
       </Grid>
 
-      <Card sx={{ borderRadius: 3 }}>
+      <Card>
         <CardContent sx={{ p: 4, textAlign: 'center' }}>
           <Typography variant="h6" fontWeight={600} mb={1}>Need a new quotation?</Typography>
-          <Typography variant="body2" color="text.secondary" mb={3}>
+          <Typography variant="body2" color="text.secondary"sx={{ mt: 2 }} >
             Browse vendors and submit a request to get custom pricing for the products and services you need.
           </Typography>
-          <Button variant="contained" onClick={() => router.push('/customer/vendors')}>
+          <Button sx={{ mt: 2 }} variant="contained" onClick={() => router.push('/customer/vendors')}>
             Browse Vendors
           </Button>
         </CardContent>

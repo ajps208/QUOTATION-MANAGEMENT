@@ -111,15 +111,17 @@ export default function ProductsPage() {
 
   const columns = [
     { field: 'name', label: 'Product Name' },
-    { field: 'sku', label: 'SKU' },
+    { field: 'sku', label: 'SKU', hideOnMobile: true },
     { 
       field: 'categoryId', 
       label: 'Category',
+      hideOnMobile: true,
       render: (row) => getCategoryName(row.categoryId)
     },
     { 
       field: 'type', 
       label: 'Type',
+      hideOnMobile: true,
       render: (row) => <Chip label={row.type} size="small" variant="outlined" />
     },
     { 
@@ -141,10 +143,10 @@ export default function ProductsPage() {
       width: 120,
       render: (row) => (
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <IconButton onClick={() => handleEdit(row)} size="small" color="primary">
+          <IconButton onClick={(e) => { e.stopPropagation(); handleEdit(row); }} size="small" color="primary">
             <EditIcon fontSize="small" />
           </IconButton>
-          <IconButton onClick={() => handleDeleteClick(row)} size="small" color="error">
+          <IconButton onClick={(e) => { e.stopPropagation(); handleDeleteClick(row); }} size="small" color="error">
             <DeleteIcon fontSize="small" />
           </IconButton>
         </Box>
@@ -174,6 +176,7 @@ export default function ProductsPage() {
         <AppTable 
           columns={columns}
           data={filteredProducts}
+          onRowClick={(row) => handleEdit(row)}
           emptyState={
             <EmptyState 
               title="No products found" 

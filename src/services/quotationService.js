@@ -1,8 +1,9 @@
 export const quotationService = {
-  async getQuotations(businessId, customerId) {
+  async getQuotations(businessId, customerId, userId) {
     const params = new URLSearchParams();
     if (businessId) params.set('businessId', businessId);
     if (customerId) params.set('customerId', customerId);
+    if (userId) params.set('userId', userId);
     const res = await fetch(`/api/quotations?${params}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed to fetch quotations');
@@ -55,5 +56,9 @@ export const quotationService = {
 
   async getQuotationsByCustomer(customerId) {
     return this.getQuotations(null, customerId);
+  },
+
+  async getQuotationsByUser(userId) {
+    return this.getQuotations(null, null, userId);
   },
 };

@@ -13,19 +13,22 @@ export default function ConfirmDialog({
 }) {
   return (
     <Dialog open={open} onClose={onCancel} maxWidth="xs" fullWidth>
-      <DialogTitle sx={{ pt: 5, px: 5, pb: 2, fontWeight: 700 }}>{title}</DialogTitle>
-      <DialogContent sx={{ px: 5, pb: 5, pt: 1 }}>
-        <DialogContentText sx={{ fontSize: '1.05rem', lineHeight: 1.7 }}>{message}</DialogContentText>
+      <DialogTitle sx={{ pb: 1, fontSize: '1.125rem', fontWeight: 600 }}>{title}</DialogTitle>
+      <DialogContent sx={{ pb: 3 }}>
+        <DialogContentText sx={{ fontSize: '0.9375rem', lineHeight: 1.7, color: '#5F6B62' }}>
+          {message}
+        </DialogContentText>
       </DialogContent>
-      <DialogActions sx={{ px: 5, pb: 5, gap: 2 }}>
-        <Button onClick={onCancel} color="inherit" disabled={loading} size="large">
+      <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+        <Button onClick={onCancel} color="inherit" disabled={loading} sx={{ borderRadius: 3 }}>
           {cancelLabel}
         </Button>
-        <Button 
-          onClick={onConfirm} 
-          color={confirmColor} 
-          variant="contained" 
+        <Button
+          onClick={onConfirm}
+          color={confirmColor}
+          variant="contained"
           disabled={loading}
+          sx={{ borderRadius: 3 }}
         >
           {confirmLabel}
         </Button>

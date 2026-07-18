@@ -1,12 +1,15 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Box, Card, CardContent, Typography, Grid, TextField, Button, Avatar } from '@mui/material';
+import { Box, Grid, Typography, Avatar, InputAdornment, Divider } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import BusinessIcon from '@mui/icons-material/Business';
 
 import { useAuthStore } from '@/store/useAuthStore';
 import { businessService } from '@/services/businessService';
 import PageHeader from '@/components/common/PageHeader';
+import FormSection from '@/components/common/FormSection';
+import FormField from '@/components/common/FormField';
+import AppButton from '@/components/common/AppButton';
 import { useSnackbar } from '@/hooks/useSnackbar';
 
 export default function BusinessSettingsPage() {
@@ -74,7 +77,13 @@ export default function BusinessSettingsPage() {
     }
   };
 
-  if (loading) return <Typography sx={{ mt: 4 }}>Loading settings...</Typography>;
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200 }}>
+        <Typography color="text.secondary">Loading settings...</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -83,117 +92,182 @@ export default function BusinessSettingsPage() {
         subtitle="Manage your company profile and default preferences"
       />
 
-      <Grid container spacing={4}>
+      <Grid container spacing={{ xs: 3, md: 4 }}>
+        {/* Sidebar Card */}
         <Grid xs={12} md={4}>
-          <Card sx={{ borderRadius: 3, mb: 3 }}>
-            <CardContent sx={{ p: 4, textAlign: 'center' }}>
-              <Avatar sx={{ width: 100, height: 100, mx: 'auto', mb: 2, bgcolor: 'primary.light', color: 'primary.main' }}>
-                <BusinessIcon sx={{ fontSize: 50 }} />
+          <FormSection>
+            <Box sx={{ textAlign: 'center', py: 1 }}>
+              <Avatar
+                sx={{
+                  width: 96,
+                  height: 96,
+                  mx: 'auto',
+                  mb: 2,
+                  bgcolor: 'primary.light',
+                  color: 'primary.main',
+                  fontSize: '2.5rem',
+                  boxShadow: '0 4px 12px rgba(79,70,229,0.15)',
+                }}
+              >
+                <BusinessIcon sx={{ fontSize: 44 }} />
               </Avatar>
-              <Typography variant="h6" fontWeight={700}>{formData.name}</Typography>
-              <Typography variant="body2" color="text.secondary">{formData.industry}</Typography>
-              <Button variant="outlined" size="small" sx={{ mt: 2 }}>Upload Logo</Button>
-            </CardContent>
-          </Card>
+              <Typography variant="h6" fontWeight={600} sx={{ letterSpacing: '-0.01em' }}>
+                {formData.name || 'Your Business'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                {formData.industry || 'Industry not set'}
+              </Typography>
+              <AppButton
+                variant="outlined"
+                size="small"
+                sx={{ mt: 2.5 }}
+              >
+                Upload Logo
+              </AppButton>
+            </Box>
+          </FormSection>
           
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="subtitle2" fontWeight={700} color="text.secondary" mb={2}>QUOTATION DEFAULTS</Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3,marginTop: 2 }}>
-                <TextField 
-                  label="Default Tax (%)" 
-                  type="number" 
-                  value={formData.taxPercent} 
-                  onChange={(e) => setFormData({...formData, taxPercent: Number(e.target.value)})} 
-                  size="small"
-                />
-                <TextField 
-                  label="Currency" 
-                  value={formData.currency} 
-                  onChange={(e) => setFormData({...formData, currency: e.target.value})} 
-                  size="small"
-                />
-                <TextField 
-                  label="Quotation ID Prefix" 
-                  value={formData.quotationPrefix} 
-                  onChange={(e) => setFormData({...formData, quotationPrefix: e.target.value})} 
-                  size="small"
-                  helperText="e.g. QT, INV, EST"
-                />
-              </Box>
-            </CardContent>
-          </Card>
+          <Box sx={{ mt: 3 }}>
+            <FormSection title="Quotation Defaults" description="Default values for new quotations">
+              <FormField
+                label="Default Tax Rate"
+                type="number"
+                value={formData.taxPercent}
+                onChange={(e) => setFormData({...formData, taxPercent: Number(e.target.value)})}
+                endAdornment={<InputAdornment position="end">%</InputAdornment>}
+              />
+              <FormField
+                label="Currency"
+                value={formData.currency}
+                onChange={(e) => setFormData({...formData, currency: e.target.value})}
+                placeholder="INR"
+              />
+              <FormField
+                label="Quotation ID Prefix"
+                value={formData.quotationPrefix}
+                onChange={(e) => setFormData({...formData, quotationPrefix: e.target.value})}
+                placeholder="QT"
+                helperText="e.g. QT, INV, EST"
+              />
+            </FormSection>
+          </Box>
         </Grid>
         
+        {/* Main Form */}
         <Grid xs={12} md={8}>
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent sx={{ p: 4 }}>
-              <Typography variant="h6" fontWeight={600} mb={3}>Company Profile</Typography>
-              
-              <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 5, mt: 2 }}>
-                <Grid container spacing={4}>
-                  <Grid xs={12} sm={6}>
-                    <TextField label="Business Name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required fullWidth />
-                  </Grid>
-                  <Grid xs={12} sm={6}>
-                    <TextField label="Industry / Type" value={formData.industry} onChange={(e) => setFormData({...formData, industry: e.target.value})} fullWidth />
-                  </Grid>
-                  <Grid xs={12} sm={6}>
-                    <TextField label="Contact Email" type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required fullWidth />
-                  </Grid>
-                  <Grid xs={12} sm={6}>
-                    <TextField label="Phone Number" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} fullWidth />
-                  </Grid>
-                  <Grid xs={12}>
-                    <TextField label="Street Address" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} fullWidth />
-                  </Grid>
-                  <Grid xs={12} sm={4}>
-                    <TextField label="City" value={formData.city} onChange={(e) => setFormData({...formData, city: e.target.value})} fullWidth />
-                  </Grid>
-                  <Grid xs={12} sm={4}>
-                    <TextField label="State / Province" value={formData.state} onChange={(e) => setFormData({...formData, state: e.target.value})} fullWidth />
-                  </Grid>
-                  <Grid xs={12} sm={4}>
-                    <TextField label="Country" value={formData.country} onChange={(e) => setFormData({...formData, country: e.target.value})} fullWidth />
-                  </Grid>
-                  <Grid xs={12}>
-                    <TextField 
-                      label="Default Payment Terms" 
-                      value={formData.paymentTerms} 
-                      onChange={(e) => setFormData({...formData, paymentTerms: e.target.value})} 
-                      multiline 
-                      rows={2} 
-                      fullWidth 
-                      helperText="These will be automatically added to new quotations"
-                    />
-                  </Grid>
-                  <Grid xs={12}>
-                    <TextField 
-                      label="Business Description" 
-                      value={formData.description} 
-                      onChange={(e) => setFormData({...formData, description: e.target.value})} 
-                      multiline 
-                      rows={3} 
-                      fullWidth 
-                      helperText="Visible to customers on your vendor profile"
-                    />
-                  </Grid>
+          <FormSection title="Company Profile">
+            <Box component="form" onSubmit={handleSubmit}>
+              <Grid container spacing={2.5}>
+                <Grid xs={12} sm={6}>
+                  <FormField
+                    label="Business Name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    required
+                    placeholder="Acme Corporation"
+                  />
                 </Grid>
-                
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 4 }}>
-                  <Button 
-                    type="submit" 
-                    variant="contained" 
-                    disabled={saving} 
-                    size="large"
-                    startIcon={<SaveIcon />}
-                  >
-                    {saving ? 'Saving...' : 'Save Settings'}
-                  </Button>
-                </Box>
+                <Grid xs={12} sm={6}>
+                  <FormField
+                    label="Industry / Type"
+                    value={formData.industry}
+                    onChange={(e) => setFormData({...formData, industry: e.target.value})}
+                    placeholder="Technology, Manufacturing..."
+                  />
+                </Grid>
+                <Grid xs={12} sm={6}>
+                  <FormField
+                    label="Contact Email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    required
+                    placeholder="hello@acme.com"
+                  />
+                </Grid>
+                <Grid xs={12} sm={6}>
+                  <FormField
+                    label="Phone Number"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    placeholder="+91 98765 43210"
+                  />
+                </Grid>
+                <Grid xs={12}>
+                  <FormField
+                    label="Street Address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    placeholder="123 Business Park, Sector 5"
+                  />
+                </Grid>
+                <Grid xs={12} sm={4}>
+                  <FormField
+                    label="City"
+                    value={formData.city}
+                    onChange={(e) => setFormData({...formData, city: e.target.value})}
+                    placeholder="Mumbai"
+                  />
+                </Grid>
+                <Grid xs={12} sm={4}>
+                  <FormField
+                    label="State / Province"
+                    value={formData.state}
+                    onChange={(e) => setFormData({...formData, state: e.target.value})}
+                    placeholder="Maharashtra"
+                  />
+                </Grid>
+                <Grid xs={12} sm={4}>
+                  <FormField
+                    label="Country"
+                    value={formData.country}
+                    onChange={(e) => setFormData({...formData, country: e.target.value})}
+                    placeholder="India"
+                  />
+                </Grid>
+
+                <Grid xs={12}>
+                  <Divider sx={{ my: 1 }} />
+                </Grid>
+
+                <Grid xs={12}>
+                  <FormField
+                    label="Default Payment Terms"
+                    value={formData.paymentTerms}
+                    onChange={(e) => setFormData({...formData, paymentTerms: e.target.value})}
+                    multiline
+                    rows={2}
+                    placeholder="e.g., 50% advance, balance on delivery"
+                    helperText="Automatically added to new quotations"
+                  />
+                </Grid>
+                <Grid xs={12}>
+                  <FormField
+                    label="Business Description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    multiline
+                    rows={3}
+                    placeholder="Tell customers about your business..."
+                    helperText="Visible to customers on your vendor profile"
+                  />
+                </Grid>
+              </Grid>
+              
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 4, mt: 1 }}>
+                <AppButton
+                  type="submit"
+                  variant="contained"
+                  loading={saving}
+                  size="large"
+                  startIcon={!saving && <SaveIcon />}
+                  sx={{ minWidth: 160 }}
+                >
+                  {saving ? 'Saving...' : 'Save Settings'}
+                </AppButton>
               </Box>
-            </CardContent>
-          </Card>
+            </Box>
+          </FormSection>
         </Grid>
       </Grid>
     </Box>

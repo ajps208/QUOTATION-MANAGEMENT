@@ -1,16 +1,15 @@
 import { Box, Card, CardContent, Typography } from '@mui/material';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 
 const colorMap = {
-  primary: { bg: '#ede9fe', icon: '#4f46e5', accent: '#4f46e5' },
-  secondary: { bg: '#e0f2fe', icon: '#0284c7', accent: '#0284c7' },
-  success: { bg: '#dcfce7', icon: '#16a34a', accent: '#16a34a' },
-  warning: { bg: '#fef9c3', icon: '#ca8a04', accent: '#ca8a04' },
-  error: { bg: '#fee2e2', icon: '#dc2626', accent: '#dc2626' },
-  info: { bg: '#dbeafe', icon: '#2563eb', accent: '#2563eb' },
+  primary: { bg: 'rgba(31,107,71,0.08)', icon: '#1F6B47' },
+  secondary: { bg: 'rgba(95,107,98,0.08)', icon: '#5F6B62' },
+  success: { bg: 'rgba(31,107,71,0.08)', icon: '#1F6B47' },
+  warning: { bg: 'rgba(244,183,64,0.08)', icon: '#F4B740' },
+  error: { bg: 'rgba(229,115,115,0.08)', icon: '#E57373' },
+  info: { bg: 'rgba(31,107,71,0.08)', icon: '#1F6B47' },
 };
 
-export default function StatCard({ title, value, subtitle, icon, color = 'primary', trend }) {
+export default function StatCard({ title, value, subtitle, icon, color = 'primary' }) {
   const colors = colorMap[color] || colorMap.primary;
 
   return (
@@ -19,56 +18,43 @@ export default function StatCard({ title, value, subtitle, icon, color = 'primar
         height: '100%',
         transition: 'transform 0.2s ease, box-shadow 0.2s ease',
         '&:hover': {
-          transform: 'translateY(-3px)',
-          boxShadow: '0 12px 40px -8px rgba(0,0,0,0.08)',
+          transform: 'translateY(-2px)',
+          boxShadow: '0 4px 12px 0 rgba(0,0,0,0.05)',
         },
       }}
     >
-      <CardContent sx={{ p: '28px !important' }}>
-        {/* Top row: Icon */}
-        <Box
-          sx={{
-            width: 48,
-            height: 48,
-            borderRadius: 3,
-            bgcolor: colors.bg,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: colors.icon,
-            mb: 3,
-            '& svg': { fontSize: 24 },
-          }}
-        >
-          {icon}
+      <CardContent sx={{ p: { xs: '16px !important', sm: '20px !important' } }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Box
+            sx={{
+              width: 42,
+              height: 42,
+              borderRadius: 3,
+              bgcolor: colors.bg,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: colors.icon,
+              '& svg': { fontSize: 20 },
+            }}
+          >
+            {icon}
+          </Box>
         </Box>
-
-        {/* Value */}
         <Typography
           variant="h4"
           fontWeight={700}
-          sx={{ letterSpacing: '-0.02em', lineHeight: 1, mb: 1 }}
+          sx={{ letterSpacing: '-0.025em', lineHeight: 1, mb: 0.5, fontSize: { xs: '1.5rem', sm: '1.75rem' } }}
         >
           {value}
         </Typography>
-
-        {/* Title */}
-        <Typography
-          variant="body2"
-          color="text.secondary"
-          fontWeight={500}
-          sx={{ mb: subtitle ? 1.5 : 0 }}
-        >
+        <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ mb: subtitle ? 0.5 : 0 }}>
           {title}
         </Typography>
-
-        {/* Subtitle / trend */}
         {subtitle && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <Typography variant="caption" color="text.secondary">
-              {subtitle}
-            </Typography>
-          </Box>
+          <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.6875rem' }}>
+            {subtitle}
+          </Typography>
         )}
       </CardContent>
     </Card>

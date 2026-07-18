@@ -9,6 +9,8 @@ import { USER_ROLES } from '@/constants/roles';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 
+const drawerWidth = 260;
+
 export default function BusinessLayout({ children }) {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
@@ -25,7 +27,7 @@ export default function BusinessLayout({ children }) {
   }, [isAuthenticated, user, router, fetchNotifications]);
 
   if (!isAuthenticated || user?.role !== USER_ROLES.BUSINESS) {
-    return null; // Will redirect
+    return null;
   }
 
   return (
@@ -36,15 +38,16 @@ export default function BusinessLayout({ children }) {
         component="main"
         sx={{
           flexGrow: 1,
-          px: { xs: 3, md: 5, xl: 6 },
-          pt: { xs: 3, md: 4 },
-          pb: { xs: 6, md: 8 },
-          width: { sm: `calc(100% - 280px)` },
-          bgcolor: 'background.default',
+          px: { xs: 2.5, md: 4, xl: 5 },
+          pt: { xs: 2.5, md: 3 },
+          pb: { xs: 4, md: 6 },
+          width: { md: `calc(100% - ${drawerWidth}px)` },
+          bgcolor: '#F6F6F6',
+          overflowX: 'hidden',
         }}
       >
-        <Toolbar /> {/* Spacer for fixed Topbar */}
-        <Box sx={{ maxWidth: 1440, mx: 'auto' }}>
+        <Toolbar sx={{ minHeight: { xs: 56, md: 64 } }} />
+        <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
           {children}
         </Box>
       </Box>

@@ -99,10 +99,10 @@ export default function CustomersPage() {
 
   const columns = [
     { field: 'name', label: 'Contact Name' },
-    { field: 'companyName', label: 'Company' },
-    { field: 'email', label: 'Email' },
+    { field: 'companyName', label: 'Company', hideOnMobile: true },
+    { field: 'email', label: 'Email', hideOnMobile: true },
     { field: 'phone', label: 'Phone' },
-    { field: 'city', label: 'City' },
+    { field: 'city', label: 'City', hideOnMobile: true },
     {
       field: 'actions',
       label: 'Actions',
@@ -110,10 +110,10 @@ export default function CustomersPage() {
       width: 120,
       render: (row) => (
         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <IconButton onClick={() => handleEdit(row)} size="small" color="primary">
+          <IconButton onClick={(e) => { e.stopPropagation(); handleEdit(row); }} size="small" color="primary">
             <EditIcon fontSize="small" />
           </IconButton>
-          <IconButton onClick={() => handleDeleteClick(row)} size="small" color="error">
+          <IconButton onClick={(e) => { e.stopPropagation(); handleDeleteClick(row); }} size="small" color="error">
             <DeleteIcon fontSize="small" />
           </IconButton>
         </Box>
@@ -143,6 +143,7 @@ export default function CustomersPage() {
         <AppTable 
           columns={columns}
           data={filteredCustomers}
+          onRowClick={(row) => handleEdit(row)}
           emptyState={
             <EmptyState 
               title="No customers found" 

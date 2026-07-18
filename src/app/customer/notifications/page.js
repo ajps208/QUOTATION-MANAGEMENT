@@ -39,7 +39,7 @@ export default function CustomerNotificationsPage() {
           description="You don't have any new notifications at the moment."
         />
       ) : (
-        <Card sx={{ borderRadius: 3 }}>
+        <Card sx={{ borderRadius: 1 }}>
           <List disablePadding>
             {notifications.map((notification, index) => {
               const isUnread = !notification.read;
