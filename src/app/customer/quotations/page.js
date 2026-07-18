@@ -1,8 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Typography, Button, Card, CardContent } from '@mui/material';
+import { Box, Typography, Button, Card, Chip, Stack, Tooltip, IconButton } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 import { useAuthStore } from '@/store/useAuthStore';
 import { quotationService } from '@/services/quotationService';
@@ -13,6 +15,8 @@ import AppSearch from '@/components/common/AppSearch';
 import AppFilter from '@/components/common/AppFilter';
 import StatusChip from '@/components/common/StatusChip';
 import EmptyState from '@/components/common/EmptyState';
+import { ErrorState } from '@/components/common/ErrorState';
+import { TableLoader } from '@/components/common/LoadingState';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { QUOTATION_STATUS } from '@/constants/statuses';
 import { formatCurrency, formatDate } from '@/utils/formatters';
@@ -26,38 +30,47 @@ export default function CustomerQuotationsPage() {
   const [quotations, setQuotations] = useState([]);
   const [businesses, setBusinesses] = useState({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
 
+  const fetchData = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const [quots, bizList] = await Promise.all([
+        quotationService.getQuotationsByUser(user.id),
+        businessService.getBusinesses(),
+      ]);
+      setQuotations(quots.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+      const bizMap = {};
+      bizList.forEach(b => bizMap[b.id] = b);
+      setBusinesses(bizMap);
+    } catch (err) {
+      setError(err);
+      showError('Failed to load quotations');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id, showError]);
+
   useEffect(() => {
-    const fetchData = async () => {
-      if (!user?.id) return;
-      try {
-        const [quots, bizList] = await Promise.all([
-          quotationService.getQuotationsByUser(user.id),
-          businessService.getBusinesses(),
-        ]);
-        setQuotations(quots.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-        const bizMap = {};
-        bizList.forEach(b => bizMap[b.id] = b);
-        setBusinesses(bizMap);
-      } catch (err) {
-        showError('Failed to load quotations');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
-  }, [user]);
+  }, [fetchData]);
 
-  const filtered = quotations.filter(q => {
-    const matchSearch = q.quotationNumber.toLowerCase().includes(search.toLowerCase()) ||
-      businesses[q.businessId]?.name?.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === '' || q.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const filtered = useMemo(() => {
+    return quotations.filter(q => {
+      const matchSearch = q.quotationNumber.toLowerCase().includes(search.toLowerCase()) ||
+        businesses[q.businessId]?.name?.toLowerCase().includes(search.toLowerCase());
+      const matchStatus = statusFilter === '' || q.status === statusFilter;
+      return matchSearch && matchStatus;
+    });
+  }, [quotations, search, statusFilter, businesses]);
 
-  const statusOptions = Object.values(QUOTATION_STATUS).map(s => ({ label: s, value: s }));
+  const statusOptions = useMemo(() => 
+    Object.values(QUOTATION_STATUS).map(s => ({ label: s, value: s }))
+  , []);
 
   const columns = [
     { field: 'quotationNumber', label: 'Quotation #' },
@@ -96,17 +109,37 @@ export default function CustomerQuotationsPage() {
       field: 'actions',
       label: '',
       align: 'right',
+      width: 120,
       render: (row) => (
-        <Button
-          size="small"
-          startIcon={<VisibilityIcon />}
-          onClick={() => router.push(`/customer/quotations/${row.id}`)}
-        >
-          View
-        </Button>
+        <Tooltip title="View">
+          <Button
+            size="small"
+            startIcon={<VisibilityIcon />}
+            onClick={() => router.push(`/customer/quotations/${row.id}`)}
+            sx={{ minWidth: 80 }}
+          >
+            View
+          </Button>
+        </Tooltip>
       ),
     },
   ];
+
+  const handleRefresh = () => {
+    fetchData();
+  };
+
+  if (loading && quotations.length === 0) {
+    return (
+      <Box>
+        <PageHeader
+          title="My Quotations"
+          subtitle="Review quotations received from vendors"
+        />
+        <TableLoader columns={7} rows={10} showToolbar={true} />
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -115,15 +148,35 @@ export default function CustomerQuotationsPage() {
         subtitle="Review quotations received from vendors"
       />
 
-      <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap' }}>
+      <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
         <AppSearch value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by number or vendor..." />
         <AppFilter label="Status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} options={statusOptions} />
-      </Box>
+        <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+          <Tooltip title="Refresh">
+            <IconButton onClick={handleRefresh} disabled={loading} size="small" sx={{ color: loading ? 'text.disabled' : 'text.secondary' }}>
+              <RefreshIcon fontSize="small" sx={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Stack>
+
+      {error && !loading && (
+        <ErrorState
+          error={error}
+          onRetry={handleRefresh}
+          variant="card"
+          size="md"
+          retryLabel="Retry"
+        />
+      )}
 
       <Card sx={{ overflow: 'hidden' }}>
         <AppTable
           columns={columns}
           data={filtered}
+          loading={loading}
+          error={error}
+          onRetry={handleRefresh}
           onRowClick={(row) => router.push(`/customer/quotations/${row.id}`)}
           emptyState={
             <EmptyState

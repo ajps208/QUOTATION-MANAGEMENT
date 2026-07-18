@@ -5,7 +5,7 @@ import { Box, Card, CardContent, Chip, Grid, Stack, Typography } from '@mui/mate
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import PageHeader from '@/components/common/PageHeader';
 import LoadingState from '@/components/common/LoadingState';
-import ErrorState from '@/components/common/ErrorState';
+import { ErrorState } from '@/components/common/ErrorState';
 import EmptyState from '@/components/common/EmptyState';
 import { customerService } from '@/services/customerService';
 import { USER_ROLES } from '@/constants/roles';
