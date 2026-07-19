@@ -293,7 +293,7 @@ function QuotationBuilderInner() {
           </Typography>
           {sourceRequest && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, wordBreak: 'break-word' }}>
-              Based on request: <strong>{sourceRequest.id}</strong>
+              Based on request from <strong>{sourceRequest.customerInfo?.name || 'customer'}</strong>
             </Typography>
           )}
         </Box>

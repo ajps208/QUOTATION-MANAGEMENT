@@ -7,32 +7,23 @@ import User from '@/models/User';
 import Notification from '@/models/Notification';
 import QuotationRequest from '@/models/QuotationRequest';
 import { QUOTATION_STATUS, REQUEST_STATUS } from '@/constants/statuses';
+import { serialize, toId, serializeItems } from '@/app/api/utils/serializer';
 
-function serialize(doc) {
-  const obj = doc.toObject ? doc.toObject() : doc;
-  obj.id = obj._id.toString();
-  obj.businessId = obj.businessId?.toString();
-  obj.customerId = obj.customerId?.toString();
-  obj.requestId = obj.requestId?.toString() || null;
+function toQuotation(doc) {
+  const obj = serialize(doc, { businessId: toId, customerId: toId });
+  obj.requestId = toId(doc.requestId);
   if (obj.items) {
-    obj.items = obj.items.map(item => ({
-      ...item,
-      _id: item._id?.toString(),
-      productId: item.productId?.toString(),
-    }));
+    obj.items = serializeItems(doc.items, { productId: toId });
   }
   if (obj.specialDiscounts) {
-    obj.specialDiscounts = obj.specialDiscounts.map(d => ({ ...d, _id: d._id?.toString() }));
+    obj.specialDiscounts = doc.specialDiscounts.map(d => ({ ...d, _id: d._id?.toString() }));
   }
   if (obj.additionalCharges) {
-    obj.additionalCharges = obj.additionalCharges.map(c => ({ ...c, _id: c._id?.toString() }));
+    obj.additionalCharges = doc.additionalCharges.map(c => ({ ...c, _id: c._id?.toString() }));
   }
-  delete obj._id;
-  delete obj.__v;
   return obj;
 }
 
-// GET /api/quotations?businessId=xxx&customerId=xxx&userId=xxx
 export async function GET(request) {
   try {
     await connectToDatabase();
@@ -40,21 +31,21 @@ export async function GET(request) {
     const businessId = searchParams.get('businessId');
     const customerId = searchParams.get('customerId');
     const userId = searchParams.get('userId');
+    const status = searchParams.get('status');
     const query = {};
     if (businessId) query.businessId = businessId;
+    if (status) query.status = status;
 
     if (customerId) {
       query.customerId = customerId;
     } else if (userId) {
-      // Resolve User ID to Customer CRM IDs via email match
-      const user = await User.findById(userId).select('email');
+      const user = await User.findById(userId).select('email').lean({ virtuals: false });
       if (user?.email) {
-        const customerRecords = await Customer.find({ email: user.email }).select('_id');
+        const customerRecords = await Customer.find({ email: user.email }).select('_id').lean({ virtuals: false });
         const customerIds = customerRecords.map(c => c._id);
         if (customerIds.length > 0) {
           query.customerId = { $in: customerIds };
         } else {
-          // No matching Customer CRM record found — return empty
           return Response.json([]);
         }
       } else {
@@ -62,29 +53,30 @@ export async function GET(request) {
       }
     }
 
-    const quotations = await Quotation.find(query).sort({ createdAt: -1 });
-    return Response.json(quotations.map(serialize));
+    const quotations = await Quotation.find(query)
+      .select('quotationNumber businessId customerId requestId quotationDate expiryDate currency items overallDiscount specialDiscounts additionalCharges paymentTerms terms businessNotes customerNotes status rejectionReason revision settings createdAt updatedAt')
+      .sort({ createdAt: -1 })
+      .lean({ virtuals: false });
+
+    return Response.json(quotations.map(toQuotation));
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
 
-// POST /api/quotations
 export async function POST(request) {
   try {
     await connectToDatabase();
     const data = await request.json();
 
-    // Auto-generate quotation number
-    const business = await Business.findById(data.businessId);
-    const prefix = data.prefix || business?.quotationPrefix || 'QT';
+    const business = await Business.findById(data.businessId).select('quotationSettings').lean({ virtuals: false });
+    const prefix = data.prefix || business?.quotationSettings?.quotationPrefix || 'QT';
     const count = await Quotation.countDocuments({ businessId: data.businessId });
     const year = new Date().getFullYear();
     const quotationNumber = `${prefix}-${year}-${String(count + 1).padStart(4, '0')}`;
 
     const quotation = await Quotation.create({ ...data, quotationNumber });
 
-    // Update source request status if this quotation is generated from a request
     if (data.requestId) {
       await QuotationRequest.findByIdAndUpdate(data.requestId, {
         status: REQUEST_STATUS.CONVERTED_TO_QUOTATION,
@@ -92,7 +84,6 @@ export async function POST(request) {
       });
     }
 
-    // Log activity
     if (data.userId) {
       await Activity.create({
         businessId: data.businessId,
@@ -103,23 +94,22 @@ export async function POST(request) {
       });
     }
 
-    // Send notification to customer when quotation is sent directly
     if (data.status === QUOTATION_STATUS.SENT) {
-      const customer = await Customer.findById(quotation.customerId);
+      const customer = await Customer.findById(quotation.customerId).select('email name companyName').lean({ virtuals: false });
       if (customer) {
-        const customerUser = await User.findOne({ email: customer.email });
+        const customerUser = await User.findOne({ email: customer.email }).select('_id').lean({ virtuals: false });
         if (customerUser) {
           await Notification.create({
             userId: customerUser._id,
             title: 'New Quotation Received',
-            message: `You have received a new quotation (${quotationNumber}) from ${business?.name || 'a vendor'}.`,
+            message: `You have received a new quotation (${quotationNumber}) from ${business?.profile?.businessName || 'a vendor'}.`,
             link: `/customer/quotations/${quotation._id}`,
           });
         }
       }
     }
 
-    return Response.json(serialize(quotation), { status: 201 });
+    return Response.json(toQuotation(quotation), { status: 201 });
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }

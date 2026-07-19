@@ -108,8 +108,8 @@ export default function CustomerRequestsPage() {
   const filteredRequests = useMemo(() => {
     return requests.filter(r => {
       const customerName = r.customerInfo?.name || '';
-      const matchSearch = r.id.toLowerCase().includes(search.toLowerCase()) ||
-        customerName.toLowerCase().includes(search.toLowerCase());
+      const matchSearch = customerName.toLowerCase().includes(search.toLowerCase()) ||
+        r.id?.toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === '' || r.status === statusFilter;
       return matchSearch && matchStatus;
     });
@@ -143,7 +143,7 @@ export default function CustomerRequestsPage() {
       />
 
       <Stack direction="row" spacing={2} sx={{ mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
-        <AppSearch value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by request ID or customer..." />
+        <AppSearch value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by customer name..." />
         <AppFilter label="Status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} options={statusOptions} />
         <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
           <Tooltip title="Refresh">
@@ -180,9 +180,9 @@ export default function CustomerRequestsPage() {
                 <CardContent sx={{ p: 3 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
                     <Box>
-                      <Typography variant="subtitle1" fontWeight={700}>{req.id}</Typography>
+                      <Typography variant="subtitle1" fontWeight={700}>Request from {req.customerInfo?.name || 'Unknown Customer'}</Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        From: <strong>{req.customerInfo?.name || req.customerId}</strong> {req.customerInfo?.company ? `(${req.customerInfo.company})` : ''} • {formatDate(req.requestDate)}
+                        {req.customerInfo?.company ? `Company: ${req.customerInfo.company} • ` : ''}{formatDate(req.requestDate)}
                       </Typography>
                       <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap' }}>
                         {req.items.map((item, i) => (
@@ -251,10 +251,10 @@ export default function CustomerRequestsPage() {
 
       {rejectOpen && rejectRequest && (
         <Dialog open={rejectOpen} onClose={handleRejectCancel} maxWidth="sm" fullWidth>
-          <DialogTitle>Reject Request: {rejectRequest.id}</DialogTitle>
+          <DialogTitle>Reject Request from {rejectRequest.customerInfo?.name || 'Unknown Customer'}</DialogTitle>
           <DialogContent dividers>
             <Typography variant="body2" color="text.secondary" paragraph="true">
-              Are you sure you want to reject this request from <strong>{rejectRequest.customerInfo?.name || rejectRequest.customerId}</strong>?
+              Are you sure you want to reject this request from <strong>{rejectRequest.customerInfo?.name || 'Unknown Customer'}</strong>?
             </Typography>
             <Typography variant="body2" color="error.main" fontWeight={600} sx={{ mb: 1 }}>
               Rejection Reason (required - will be sent to customer)

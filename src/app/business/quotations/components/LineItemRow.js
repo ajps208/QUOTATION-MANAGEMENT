@@ -5,6 +5,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import FormField from '@/components/common/FormField';
 import FormGrid from '@/components/common/FormGrid';
+import ProductAvatar from '@/components/common/ProductAvatar';
 import { DISCOUNT_TYPE } from '@/constants/discountTypes';
 import { formatCurrency } from '@/utils/formatters';
 
@@ -39,6 +40,7 @@ export default function LineItemRow({ item, index, products, onUpdate, onRemove 
   };
 
   const productOptions = products.map(p => ({ value: p.id, label: p.name }));
+  const selectedProduct = item.productId ? products.find(p => p.id === item.productId) : null;
 
   return (
     <Box sx={{
@@ -92,6 +94,14 @@ export default function LineItemRow({ item, index, products, onUpdate, onRemove 
           options={productOptions}
           fullWidth
         />
+        {selectedProduct && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: -1.5, mb: 0.5 }}>
+            <ProductAvatar image={selectedProduct.image} name={selectedProduct.name} size={24} />
+            <Typography variant="caption" color="text.secondary">
+              {selectedProduct.sku && `${selectedProduct.sku}`}
+            </Typography>
+          </Box>
+        )}
 
         {/* Row 2: Qty, Unit Price, Total */}
         <FormField

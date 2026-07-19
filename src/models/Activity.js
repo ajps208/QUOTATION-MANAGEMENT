@@ -11,4 +11,6 @@ const activitySchema = new mongoose.Schema({
   details: { type: String }
 }, { timestamps: true });
 
+activitySchema.index({ businessId: 1, createdAt: -1 });
+
 export default mongoose.models.Activity || mongoose.model('Activity', activitySchema);

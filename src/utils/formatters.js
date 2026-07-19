@@ -29,3 +29,12 @@ export const formatDateTime = (dateString) => {
 export const formatPercentage = (value) => {
   return `${Number(value || 0).toFixed(2)}%`;
 };
+
+export const formatRequestReference = (id, createdAt) => {
+  if (!id) return '—';
+  const date = createdAt ? new Date(createdAt) : new Date();
+  const year = date.getFullYear().toString().slice(-2);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const suffix = id.slice(-4).toUpperCase();
+  return `REQ-${year}${month}-${suffix}`;
+};

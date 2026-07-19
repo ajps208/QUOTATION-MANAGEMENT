@@ -17,4 +17,7 @@ const userSchema = new mongoose.Schema({
   businessId: { type: mongoose.Schema.Types.ObjectId, ref: 'Business' },
 }, { timestamps: true });
 
+userSchema.index({ email: 1 });
+userSchema.index({ businessId: 1 });
+
 export default mongoose.models.User || mongoose.model('User', userSchema);

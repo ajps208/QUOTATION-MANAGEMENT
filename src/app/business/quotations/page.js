@@ -136,7 +136,7 @@ export default function BusinessQuotationsPage() {
       sortable: true,
       render: (row) => (
         <Typography variant="body2" fontWeight={500}>
-          {customers[row.customerId]?.name || row.customerId}
+          {customers[row.customerId]?.name || 'Unknown Customer'}
         </Typography>
       ),
     },

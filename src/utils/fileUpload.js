@@ -5,6 +5,7 @@ const MAX_SIZE = {
   logo: 5 * 1024 * 1024,
   seal: 3 * 1024 * 1024,
   signature: 2 * 1024 * 1024,
+  product: 5 * 1024 * 1024,
 };
 
 export function readFileAsDataUrl(file) {

@@ -8,10 +8,13 @@ export const useNotificationStore = create((set, get) => ({
   error: null,
 
   fetchNotifications: async (userId) => {
+    const state = get();
+    if (state.loading) return;
+    
     set({ loading: true, error: null });
     try {
       const notifications = await notificationService.getNotifications(userId);
-      const unreadCount = await notificationService.getUnreadCount(userId);
+      const unreadCount = notifications.filter(n => !n.read).length;
       set({ notifications, unreadCount, loading: false });
     } catch (error) {
       set({ error: error.message, loading: false });
@@ -27,7 +30,7 @@ export const useNotificationStore = create((set, get) => ({
         );
         return {
           notifications: updated,
-          unreadCount: Math.max(0, state.unreadCount - 1),
+          unreadCount: Math.max(0, updated.filter(n => !n.read).length),
         };
       });
     } catch (error) {

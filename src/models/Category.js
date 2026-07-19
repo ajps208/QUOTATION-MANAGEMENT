@@ -13,4 +13,6 @@ const categorySchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
+categorySchema.index({ businessId: 1, status: 1 });
+
 export default mongoose.models.Category || mongoose.model('Category', categorySchema);

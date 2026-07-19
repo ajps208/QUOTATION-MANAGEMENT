@@ -22,4 +22,7 @@ const quotationRequestSchema = new mongoose.Schema({
   resolvedCustomerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' }
 }, { timestamps: true });
 
+quotationRequestSchema.index({ businessId: 1, createdAt: -1 });
+quotationRequestSchema.index({ customerId: 1, createdAt: -1 });
+
 export default mongoose.models.QuotationRequest || mongoose.model('QuotationRequest', quotationRequestSchema);

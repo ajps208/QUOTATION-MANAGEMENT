@@ -52,16 +52,14 @@ function serialize(doc) {
   return obj;
 }
 
-// GET /api/templates
 export async function GET() {
   try {
     await connectToDatabase();
-    let templates = await QuotationTemplate.find().sort({ createdAt: 1 });
+    let templates = await QuotationTemplate.find().select('name description primaryColor headerLayout showBusinessInfo showCustomerInfo showDiscounts showTax createdAt').sort({ createdAt: 1 }).lean({ virtuals: false });
 
-    // Seed if empty
     if (templates.length === 0) {
       await QuotationTemplate.insertMany(SEED_TEMPLATES);
-      templates = await QuotationTemplate.find().sort({ createdAt: 1 });
+      templates = await QuotationTemplate.find().select('name description primaryColor headerLayout showBusinessInfo showCustomerInfo showDiscounts showTax createdAt').sort({ createdAt: 1 }).lean({ virtuals: false });
     }
 
     return Response.json(templates.map(serialize));

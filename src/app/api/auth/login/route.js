@@ -1,23 +1,19 @@
 import connectToDatabase from '@/lib/mongodb';
 import User from '@/models/User';
-import Business from '@/models/Business';
-import QuotationSetting from '@/models/QuotationSetting';
 
-// POST /api/auth/login
 export async function POST(request) {
   try {
     await connectToDatabase();
     const { email, password } = await request.json();
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).select('name email password role phone company avatar bio businessId').lean({ virtuals: false });
     if (!user || user.password !== password) {
       return Response.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const userObj = user.toObject();
-    const { password: _, ...userWithoutPassword } = userObj;
-    // Convert _id to id for compatibility
-    userWithoutPassword.id = userObj._id.toString();
+    const { password: _, ...userWithoutPassword } = user;
+    userWithoutPassword.id = userWithoutPassword._id.toString();
+    delete userWithoutPassword._id;
     if (userWithoutPassword.businessId) {
       userWithoutPassword.businessId = userWithoutPassword.businessId.toString();
     }

@@ -68,7 +68,7 @@ export default function RequestDetailDialog({ open, onClose, request, onStatusUp
     <AppDialog
       open={open}
       onClose={onClose}
-      title={`Request: ${request.id}`}
+      title={`Request from ${request.customerInfo?.name || 'Unknown Customer'}`}
       actions={actions}
       maxWidth="sm"
     >

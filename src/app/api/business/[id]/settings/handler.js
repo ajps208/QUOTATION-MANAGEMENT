@@ -8,9 +8,9 @@ export function createSectionHandler(sectionPath) {
       try {
         await connectToDatabase();
         const { id } = await params;
-        const business = await Business.findById(id);
+        const business = await Business.findById(id).select(sectionPath).lean({ virtuals: false });
         if (!business) return Response.json({ error: 'Business not found' }, { status: 404 });
-        const section = sectionPath.split('.').reduce((obj, key) => obj?.[key], business.toObject());
+        const section = sectionPath.split('.').reduce((obj, key) => obj?.[key], business);
         return Response.json(section || {});
       } catch (err) {
         return Response.json({ error: err.message }, { status: 500 });
@@ -30,7 +30,7 @@ export function createSectionHandler(sectionPath) {
         if (Object.keys(setObj).length === 0) {
           return Response.json({ error: 'No fields to update' }, { status: 400 });
         }
-        const business = await Business.findByIdAndUpdate(id, { $set: setObj }, { new: true, runValidators: true });
+        const business = await Business.findByIdAndUpdate(id, { $set: setObj }, { new: true, runValidators: true }).lean({ virtuals: false });
         if (!business) return Response.json({ error: 'Business not found' }, { status: 404 });
         return Response.json(serializeBusiness(business));
       } catch (err) {

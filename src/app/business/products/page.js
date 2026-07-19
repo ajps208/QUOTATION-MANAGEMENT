@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Box, IconButton, Chip, Card, Grid, Typography, Tooltip, Stack } from '@mui/material';
+import ProductAvatar from '@/components/common/ProductAvatar';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -133,7 +134,7 @@ export default function ProductsPage() {
 
   const getCategoryName = (categoryId) => {
     const cat = categories.find(c => c.id === categoryId);
-    return cat ? cat.name : 'Unknown';
+    return cat ? cat.name : 'Uncategorized';
   };
 
   const handleAdd = () => {
@@ -201,6 +202,12 @@ export default function ProductsPage() {
   };
 
   const columns = [
+    {
+      field: 'image',
+      label: '',
+      width: 48,
+      render: (row) => <ProductAvatar image={row.image} name={row.name} size={36} />,
+    },
     { field: 'name', label: 'Product Name', sortable: true },
     { field: 'sku', label: 'SKU', hideOnMobile: true, sortable: true },
     { 
@@ -367,8 +374,17 @@ export default function ProductsPage() {
               <Grid xs={12} sm={6} md={4} key={product.id}>
                 <Card
                   onClick={() => handleEdit(product)}
-                  sx={{ p: 2.5, cursor: 'pointer', transition: 'box-shadow 0.2s, transform 0.2s', '&:hover': { boxShadow: 3, transform: 'translateY(-2px)' }, height: '100%', display: 'flex', flexDirection: 'column' }}
+                  sx={{ cursor: 'pointer', transition: 'box-shadow 0.2s, transform 0.2s', '&:hover': { boxShadow: 3, transform: 'translateY(-2px)' }, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
                 >
+                  <Box sx={{ height: 140, bgcolor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                    <ProductAvatar
+                      image={product.image}
+                      name={product.name}
+                      size={140}
+                      sx={{ width: '100%', height: '100%', borderRadius: 0 }}
+                    />
+                  </Box>
+                  <Box sx={{ p: 2.5, display: 'flex', flexDirection: 'column', flex: 1 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                     <Typography variant="subtitle1" fontWeight={600} sx={{ flex: 1, minWidth: 0 }}>
                       {product.name}
@@ -405,6 +421,7 @@ export default function ProductsPage() {
                       </IconButton>
                     </Box>
                   </Box>
+                </Box>
                 </Card>
               </Grid>
             ))}

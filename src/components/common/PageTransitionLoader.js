@@ -11,34 +11,24 @@ export function PageTransitionLoader() {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setProgress((p) => Math.min(p + Math.random() * 10, 90));
-    }, 200);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
     if (!pathname) return;
-    
+
     setLoading(true);
     setProgress(0);
-    
-    // Simulate loading progress
+
     const startInterval = setInterval(() => {
       setProgress((p) => Math.min(p + Math.random() * 15, 90));
     }, 150);
 
-    // Complete the progress
     const completeTimeout = setTimeout(() => {
       setProgress(100);
       clearInterval(startInterval);
-      
+
       setTimeout(() => {
         setLoading(false);
         setProgress(0);
       }, 300);
-    }, 800);
+    }, 600);
 
     return () => {
       clearInterval(startInterval);
@@ -49,17 +39,7 @@ export function PageTransitionLoader() {
   if (!loading) return null;
 
   return (
-    <Box
-      sx={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1400,
-        height: 3,
-        pointerEvents: 'none',
-      }}
-    >
+    <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1400, height: 3, pointerEvents: 'none' }}>
       <LinearProgress
         variant="determinate"
         value={progress}
@@ -75,17 +55,6 @@ export function PageTransitionLoader() {
       />
     </Box>
   );
-}
-
-export function usePageTransition() {
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  
-  const startTransition = () => {
-    setIsTransitioning(true);
-    setTimeout(() => setIsTransitioning(false), 1000);
-  };
-
-  return { isTransitioning, startTransition };
 }
 
 export default PageTransitionLoader;

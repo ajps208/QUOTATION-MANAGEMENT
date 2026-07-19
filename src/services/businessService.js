@@ -42,6 +42,15 @@ export const businessService = {
     return data;
   },
 
+  async getQuotationRequests(businessId) {
+    const params = new URLSearchParams();
+    if (businessId) params.set('businessId', businessId);
+    const res = await fetch(`/api/requests?${params}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch quotation requests');
+    return data;
+  },
+
   async searchBusinesses(query) {
     const res = await fetch(`/api/business?search=${encodeURIComponent(query)}`);
     const data = await res.json();

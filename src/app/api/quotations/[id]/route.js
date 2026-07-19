@@ -6,32 +6,23 @@ import Business from '@/models/Business';
 import Customer from '@/models/Customer';
 import User from '@/models/User';
 import { QUOTATION_STATUS } from '@/constants/statuses';
+import { serialize, toId, serializeItems } from '@/app/api/utils/serializer';
 
-function serialize(doc) {
-  const obj = doc.toObject ? doc.toObject() : doc;
-  obj.id = obj._id.toString();
-  obj.businessId = obj.businessId?.toString();
-  obj.customerId = obj.customerId?.toString();
-  obj.requestId = obj.requestId?.toString() || null;
+function toQuotation(doc) {
+  const obj = serialize(doc, { businessId: toId, customerId: toId });
+  obj.requestId = toId(doc.requestId);
   if (obj.items) {
-    obj.items = obj.items.map(item => ({
-      ...item,
-      _id: item._id?.toString(),
-      productId: item.productId?.toString(),
-    }));
+    obj.items = serializeItems(doc.items, { productId: toId });
   }
   if (obj.specialDiscounts) {
-    obj.specialDiscounts = obj.specialDiscounts.map(d => ({ ...d, _id: d._id?.toString() }));
+    obj.specialDiscounts = doc.specialDiscounts.map(d => ({ ...d, _id: d._id?.toString() }));
   }
   if (obj.additionalCharges) {
-    obj.additionalCharges = obj.additionalCharges.map(c => ({ ...c, _id: c._id?.toString() }));
+    obj.additionalCharges = doc.additionalCharges.map(c => ({ ...c, _id: c._id?.toString() }));
   }
-  delete obj._id;
-  delete obj.__v;
   return obj;
 }
 
-// GET /api/quotations/[id]
 export async function GET(request, { params }) {
   try {
     await connectToDatabase();
@@ -39,15 +30,18 @@ export async function GET(request, { params }) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
-    const quotation = await Quotation.findById(id);
+    const quotation = await Quotation.findById(id)
+      .select('quotationNumber businessId customerId requestId quotationDate expiryDate currency items overallDiscount specialDiscounts additionalCharges paymentTerms terms businessNotes customerNotes status rejectionReason revision settings createdAt updatedAt')
+      .lean({ virtuals: false });
+
     if (!quotation) return Response.json({ error: 'Quotation not found' }, { status: 404 });
 
     if (userId) {
-      const user = await User.findById(userId).select('email role');
+      const user = await User.findById(userId).select('email role').lean({ virtuals: false });
       if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
       if (user.role === 'customer') {
-        const customerRecords = await Customer.find({ email: user.email }).select('_id');
+        const customerRecords = await Customer.find({ email: user.email }).select('_id').lean({ virtuals: false });
         const customerIds = customerRecords.map(c => c._id.toString());
         if (!customerIds.includes(quotation.customerId.toString())) {
           return Response.json({ error: 'Quotation not found' }, { status: 404 });
@@ -58,29 +52,26 @@ export async function GET(request, { params }) {
       }
     }
 
-    return Response.json(serialize(quotation));
+    return Response.json(toQuotation(quotation));
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
 
-// PUT /api/quotations/[id]
 export async function PUT(request, { params }) {
   try {
     await connectToDatabase();
     const { id } = await params;
     const data = await request.json();
-    const prevQuotation = await Quotation.findById(id);
-    const quotation = await Quotation.findByIdAndUpdate(id, data, { new: true });
+    const prevQuotation = await Quotation.findById(id).select('status').lean({ virtuals: false });
+    const quotation = await Quotation.findByIdAndUpdate(id, data, { new: true }).lean({ virtuals: false });
     if (!quotation) return Response.json({ error: 'Quotation not found' }, { status: 404 });
 
-    // Trigger notifications on status changes
     if (data.status && prevQuotation?.status !== data.status) {
-      const customer = await Customer.findById(quotation.customerId);
+      const customer = await Customer.findById(quotation.customerId).select('email name companyName').lean({ virtuals: false });
       if (customer) {
         if (data.status === QUOTATION_STATUS.ACCEPTED) {
-          // Notify business owner
-          const businessUser = await User.findOne({ businessId: quotation.businessId });
+          const businessUser = await User.findOne({ businessId: quotation.businessId }).select('_id').lean({ virtuals: false });
           if (businessUser) {
             await Notification.create({
               userId: businessUser._id,
@@ -90,14 +81,13 @@ export async function PUT(request, { params }) {
             });
           }
         } else if (data.status === QUOTATION_STATUS.SENT) {
-          // Notify customer user (if they have an account on Quotely)
-          const customerUser = await User.findOne({ email: customer.email });
+          const customerUser = await User.findOne({ email: customer.email }).select('_id').lean({ virtuals: false });
           if (customerUser) {
-            const business = await Business.findById(quotation.businessId);
+            const business = await Business.findById(quotation.businessId).select('profile.businessName').lean({ virtuals: false });
             await Notification.create({
               userId: customerUser._id,
               title: 'New Quotation Received',
-              message: `You have received a new quotation (${quotation.quotationNumber}) from ${business?.name || 'a vendor'}.`,
+              message: `You have received a new quotation (${quotation.quotationNumber}) from ${business?.profile?.businessName || 'a vendor'}.`,
               link: `/customer/quotations/${id}`,
             });
           }
@@ -105,13 +95,12 @@ export async function PUT(request, { params }) {
       }
     }
 
-    return Response.json(serialize(quotation));
+    return Response.json(toQuotation(quotation));
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
 
-// DELETE /api/quotations/[id]
 export async function DELETE(request, { params }) {
   try {
     await connectToDatabase();

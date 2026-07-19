@@ -10,6 +10,13 @@ const productSchema = new mongoose.Schema({
   code: { type: String },
   sku: { type: String },
   image: { type: String, default: null },
+  imageMeta: {
+    fileName: { type: String, default: null },
+    fileSize: { type: Number, default: null },
+    mimeType: { type: String, default: null },
+    uploadedAt: { type: Date, default: null },
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  },
   description: { type: String },
   unit: { 
     type: String, 
@@ -31,5 +38,9 @@ const productSchema = new mongoose.Schema({
     default: PRODUCT_STATUS.ACTIVE 
   }
 }, { timestamps: true });
+
+productSchema.index({ businessId: 1, status: 1 });
+productSchema.index({ businessId: 1, categoryId: 1 });
+productSchema.index({ businessId: 1, name: 'text' });
 
 export default mongoose.models.Product || mongoose.model('Product', productSchema);

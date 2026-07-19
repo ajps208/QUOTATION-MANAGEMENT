@@ -27,7 +27,7 @@ import EmptyState from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { useDebounce } from '@/hooks/useDebounce';
-import { formatDate } from '@/utils/formatters';
+import { formatDate, formatRequestReference } from '@/utils/formatters';
 import RequestCard from './components/RequestCard';
 import RequestFilters from './components/RequestFilters';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
@@ -152,7 +152,7 @@ export default function CustomerRequestsPage() {
 
   const businessOptions = useMemo(() => {
     const ids = [...new Set(requests.map(r => r.businessId).filter(Boolean))];
-    return ids.map(id => ({ id, name: getBusinessName(id) || id })).sort((a, b) => a.name.localeCompare(b.name));
+    return ids.map(id => ({ id, name: getBusinessName(id) || 'Unknown Vendor' })).sort((a, b) => a.name.localeCompare(b.name));
   }, [requests, getBusinessName]);
 
   const handleFilterChange = useCallback((newFilters) => {
@@ -182,7 +182,7 @@ export default function CustomerRequestsPage() {
   const handleExportCSV = useCallback(() => {
     const headers = ['Request ID', 'Items', 'Business', 'Status', 'Created', 'Updated', 'Note'];
     const rows = filteredAndSorted.map(req => [
-      req.id,
+      formatRequestReference(req.id, req.createdAt || req.requestDate),
       req.items?.map(i => `${i.name} x${i.quantity}`).join('; ') || '',
       getBusinessName(req.businessId) || '',
       req.status || '',
@@ -204,7 +204,7 @@ export default function CustomerRequestsPage() {
   const activeFilterCount = [filters.status, filters.businessId].filter(Boolean).length;
 
   const columns = [
-    { id: 'id', label: 'Request ID', sortable: true, sx: { minWidth: 120 } },
+    { id: 'id', label: 'Reference', sortable: true, sx: { minWidth: 120 } },
     { id: 'subject', label: 'Subject', sortable: false, sx: { minWidth: 180 } },
     { id: 'business', label: 'Business', sortable: true, sx: { minWidth: 140 } },
     { id: 'items', label: 'Items', sortable: false, sx: { minWidth: 160 } },
@@ -508,7 +508,7 @@ export default function CustomerRequestsPage() {
                     onClick={() => setDetailTarget(req)}
                   >
                     <TableCell sx={{ fontWeight: 500, fontFamily: 'monospace', fontSize: '0.8125rem', py: 1.5 }}>
-                      #{req.id?.slice(-8).toUpperCase()}
+                      {formatRequestReference(req.id, req.createdAt || req.requestDate)}
                     </TableCell>
                     <TableCell sx={{ py: 1.5 }}>
                       <Typography variant="body2" fontWeight={500} noWrap sx={{ maxWidth: 220 }}>
@@ -615,7 +615,7 @@ export default function CustomerRequestsPage() {
       <AppDialog
         open={Boolean(detailTarget)}
         onClose={() => setDetailTarget(null)}
-        title={`Request #${req.id?.slice(-8).toUpperCase()}`}
+        title={`Request ${formatRequestReference(req.id, req.createdAt || req.requestDate)}`}
         maxWidth="sm"
         fullWidth
       >
@@ -630,7 +630,7 @@ export default function CustomerRequestsPage() {
 
           <DetailRow label="Business / Vendor">
             <Typography variant="body2" fontWeight={500}>
-              {getBusinessName(req.businessId) || req.businessId}
+              {getBusinessName(req.businessId) || 'Unknown Vendor'}
             </Typography>
           </DetailRow>
 
@@ -801,7 +801,7 @@ export default function CustomerRequestsPage() {
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
         title="Delete Request"
-        message={`Are you sure you want to delete request #${deleteTarget?.id?.slice(-8).toUpperCase()}? This action cannot be undone.`}
+        message={`Are you sure you want to delete request ${formatRequestReference(deleteTarget?.id, deleteTarget?.createdAt || deleteTarget?.requestDate)}? This action cannot be undone.`}
         confirmLabel="Delete"
         confirmColor="error"
         loading={deleting}

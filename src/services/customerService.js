@@ -42,4 +42,13 @@ export const customerService = {
     if (!res.ok) throw new Error(data.error || 'Failed to delete customer');
     return data;
   },
+
+  async getQuotationRequests(customerId) {
+    const params = new URLSearchParams();
+    if (customerId) params.set('customerId', customerId);
+    const res = await fetch(`/api/requests?${params}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch quotation requests');
+    return data;
+  },
 };

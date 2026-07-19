@@ -1,12 +1,17 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { Box, Button, Grid, InputAdornment } from '@mui/material';
+import { useState, useEffect, useRef } from 'react';
+import { Box, Button, Grid, InputAdornment, Typography, IconButton, Tooltip, CircularProgress } from '@mui/material';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import DeleteIcon from '@mui/icons-material/Delete';
 import AppDialog from '@/components/common/AppDialog';
 import FormField from '@/components/common/FormField';
 import FormGrid from '@/components/common/FormGrid';
 import { PRODUCT_STATUS } from '@/constants/statuses';
 import { PRODUCT_TYPE } from '@/constants/productTypes';
 import { UNITS } from '@/constants/units';
+import { processImageUpload } from '@/utils/fileUpload';
+
+const ACCEPT = 'image/png,image/jpeg,image/webp';
 
 export default function ProductDialog({ open, onClose, onSave, product, categories }) {
   const [formData, setFormData] = useState({
@@ -20,7 +25,12 @@ export default function ProductDialog({ open, onClose, onSave, product, categori
     description: '',
     status: PRODUCT_STATUS.ACTIVE,
   });
+  const [image, setImage] = useState(null);
+  const [imageMeta, setImageMeta] = useState(null);
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [imageError, setImageError] = useState('');
 
   useEffect(() => {
     if (product) {
@@ -35,6 +45,8 @@ export default function ProductDialog({ open, onClose, onSave, product, categori
         description: product.description || '',
         status: product.status || PRODUCT_STATUS.ACTIVE,
       });
+      setImage(product.image || null);
+      setImageMeta(product.imageMeta || null);
     } else {
       setFormData({
         name: '',
@@ -47,13 +59,49 @@ export default function ProductDialog({ open, onClose, onSave, product, categori
         description: '',
         status: PRODUCT_STATUS.ACTIVE,
       });
+      setImage(null);
+      setImageMeta(null);
     }
+    setImageError('');
   }, [product, open, categories]);
+
+  const handleImageSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageError('');
+    setUploading(true);
+    try {
+      const result = await processImageUpload(file, { type: 'product' });
+      if (result.success) {
+        setImage(result.dataUrl);
+        setImageMeta({
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type,
+          uploadedAt: new Date().toISOString(),
+        });
+      } else {
+        setImageError(result.error);
+      }
+    } catch {
+      setImageError('Failed to process file');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImage(null);
+    setImageMeta(null);
+    setImageError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    await onSave(formData);
+    await onSave({ ...formData, image, imageMeta });
     setLoading(false);
   };
 
@@ -92,10 +140,108 @@ export default function ProductDialog({ open, onClose, onSave, product, categori
     >
       <Box component="form" onSubmit={handleSubmit}>
         <FormGrid spacing={2.5}>
-          <FormField xs={12} sm={8} label="Item Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required autoFocus placeholder="e.g., Web Design Package" />
-          <FormField xs={12} sm={4} label="SKU / Code" value={formData.sku} onChange={(e) => setFormData({ ...formData, sku: e.target.value })} placeholder="e.g., WEB-001" />
-          
-          <FormField xs={12} sm={6} select label="Category" value={formData.categoryId} onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })} required options={categoryOptions} />
+          <Grid xs={12} sm={4}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { sm: 'flex-end' }, gap: 1 }}>
+              <Box
+                sx={{
+                  width: 120,
+                  height: 120,
+                  border: '2px dashed',
+                  borderColor: image ? 'transparent' : '#CBD5E1',
+                  borderRadius: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  bgcolor: image ? 'transparent' : '#F8FAFC',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  cursor: 'pointer',
+                  transition: 'border-color 0.2s',
+                  '&:hover': { borderColor: 'primary.light' },
+                }}
+                onClick={() => !uploading && fileInputRef.current?.click()}
+              >
+                {image ? (
+                  <>
+                    <Box
+                      component="img"
+                      src={image}
+                      alt="Product"
+                      sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    {!uploading && (
+                      <Tooltip title="Change image">
+                        <IconButton
+                          size="small"
+                          component="label"
+                          sx={{
+                            position: 'absolute',
+                            top: 4,
+                            right: 4,
+                            bgcolor: 'background.paper',
+                            boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                            '&:hover': { bgcolor: 'grey.100' },
+                          }}
+                        >
+                          <UploadFileIcon fontSize="small" />
+                          <input
+                            ref={fileInputRef}
+                            hidden
+                            type="file"
+                            accept={ACCEPT}
+                            onChange={handleImageSelect}
+                          />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </>
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 1 }}>
+                    {uploading ? (
+                      <CircularProgress size={28} />
+                    ) : (
+                      <>
+                        <UploadFileIcon sx={{ color: 'text.disabled', mb: 0.5, fontSize: 28 }} />
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          Product Image
+                        </Typography>
+                      </>
+                    )}
+                  </Box>
+                )}
+              </Box>
+              {image && !uploading && (
+                <Tooltip title="Remove image">
+                  <IconButton size="small" onClick={handleRemoveImage} color="error">
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+              {imageError && (
+                <Typography variant="caption" color="error" sx={{ display: 'block', textAlign: { sm: 'right' } }}>
+                  {imageError}
+                </Typography>
+              )}
+              {!image && !uploading && (
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={ACCEPT}
+                  hidden
+                  onChange={handleImageSelect}
+                />
+              )}
+            </Box>
+          </Grid>
+
+          <Grid xs={12} sm={8}>
+            <FormGrid spacing={2.5}>
+              <FormField xs={12} label="Item Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required autoFocus placeholder="e.g., Web Design Package" />
+              <FormField xs={12} sm={6} label="SKU / Code" value={formData.sku} onChange={(e) => setFormData({ ...formData, sku: e.target.value })} placeholder="e.g., WEB-001" />
+              <FormField xs={12} sm={6} select label="Category" value={formData.categoryId} onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })} required options={categoryOptions} />
+            </FormGrid>
+          </Grid>
+
           <FormField xs={12} sm={6} select label="Item Type" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })} options={typeOptions} />
 
           <FormField

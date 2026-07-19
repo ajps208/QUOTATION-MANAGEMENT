@@ -2,12 +2,11 @@ import connectToDatabase from '@/lib/mongodb';
 import Business from '@/models/Business';
 import { serializeBusiness } from '@/app/api/business/utils';
 
-// GET /api/business/[id]/settings/signatures - Get all signatures
 export async function GET(request, { params }) {
   try {
     await connectToDatabase();
     const { id } = await params;
-    const business = await Business.findById(id);
+    const business = await Business.findById(id).select('signatures').lean({ virtuals: false });
     if (!business) return Response.json({ error: 'Business not found' }, { status: 404 });
     return Response.json(business.signatures || []);
   } catch (err) {
@@ -15,7 +14,6 @@ export async function GET(request, { params }) {
   }
 }
 
-// PUT /api/business/[id]/settings/signatures - Replace all signatures
 export async function PUT(request, { params }) {
   try {
     await connectToDatabase();
@@ -38,7 +36,7 @@ export async function PUT(request, { params }) {
       id,
       { $set: { signatures: cleaned } },
       { new: true, runValidators: true }
-    );
+    ).lean({ virtuals: false });
     if (!business) return Response.json({ error: 'Business not found' }, { status: 404 });
     return Response.json(serializeBusiness(business));
   } catch (err) {
@@ -46,7 +44,6 @@ export async function PUT(request, { params }) {
   }
 }
 
-// DELETE /api/business/[id]/settings/signatures?signatureId=xxx - Delete a single signature
 export async function DELETE(request, { params }) {
   try {
     await connectToDatabase();

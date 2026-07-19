@@ -9,7 +9,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import StatusChip from '@/components/common/StatusChip';
-import { formatDate } from '@/utils/formatters';
+import { formatDate, formatRequestReference } from '@/utils/formatters';
 
 export default function RequestCard({ request, businessName, onView, onDelete, index = 0 }) {
   const subject = request.items?.[0]?.name || 'Quotation Request';
@@ -40,7 +40,7 @@ export default function RequestCard({ request, businessName, onView, onDelete, i
               color="text.secondary"
               sx={{ fontFamily: 'monospace', fontWeight: 500, letterSpacing: '0.02em' }}
             >
-              #{request.id?.slice(-8).toUpperCase()}
+              {formatRequestReference(request.id, request.createdAt || request.requestDate)}
             </Typography>
             <Typography
               variant="subtitle1"

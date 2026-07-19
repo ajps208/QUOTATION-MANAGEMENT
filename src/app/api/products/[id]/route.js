@@ -1,44 +1,34 @@
 import connectToDatabase from '@/lib/mongodb';
 import Product from '@/models/Product';
+import { serialize, toId } from '@/app/api/utils/serializer';
 
-function serialize(doc) {
-  const obj = doc.toObject ? doc.toObject() : doc;
-  obj.id = obj._id.toString();
-  obj.businessId = obj.businessId?.toString();
-  obj.categoryId = obj.categoryId?.toString();
-  delete obj._id;
-  delete obj.__v;
-  return obj;
-}
+const toProduct = (doc) => serialize(doc, { businessId: toId, categoryId: toId });
 
-// GET /api/products/[id]
 export async function GET(request, { params }) {
   try {
     await connectToDatabase();
     const { id } = await params;
-    const product = await Product.findById(id);
+    const product = await Product.findById(id).lean({ virtuals: false });
     if (!product) return Response.json({ error: 'Product not found' }, { status: 404 });
-    return Response.json(serialize(product));
+    return Response.json(toProduct(product));
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
 
-// PUT /api/products/[id]
 export async function PUT(request, { params }) {
   try {
     await connectToDatabase();
     const { id } = await params;
     const data = await request.json();
-    const product = await Product.findByIdAndUpdate(id, data, { new: true });
+    const product = await Product.findByIdAndUpdate(id, data, { new: true }).lean({ virtuals: false });
     if (!product) return Response.json({ error: 'Product not found' }, { status: 404 });
-    return Response.json(serialize(product));
+    return Response.json(toProduct(product));
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
 
-// DELETE /api/products/[id]
 export async function DELETE(request, { params }) {
   try {
     await connectToDatabase();

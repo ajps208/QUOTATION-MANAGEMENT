@@ -49,4 +49,9 @@ const quotationSchema = new mongoose.Schema({
   settings: { type: mongoose.Schema.Types.Mixed, default: null }
 }, { timestamps: true });
 
+quotationSchema.index({ businessId: 1, status: 1, createdAt: -1 });
+quotationSchema.index({ customerId: 1, createdAt: -1 });
+quotationSchema.index({ businessId: 1, createdAt: -1 });
+quotationSchema.index({ requestId: 1 });
+
 export default mongoose.models.Quotation || mongoose.model('Quotation', quotationSchema);

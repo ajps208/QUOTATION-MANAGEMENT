@@ -92,15 +92,18 @@ export default function CustomerQuotationsPage() {
   , []);
 
   const isViewable = (status) => VIEWABLE_STATUSES.includes(status);
+  
 
   const columns = [
     { field: 'quotationNumber', label: 'Quotation #' },
-    {
-      field: 'businessId',
-      label: 'From',
-      hideOnMobile: true,
-      render: (row) => businesses[row.businessId]?.name || row.businessId,
-    },
+   {
+  field: 'businessId',
+  label: 'From',
+  hideOnMobile: true,
+  render: (row) => {
+    return businesses[row.businessId]?.profile?.businessName || 'Unknown Vendor';
+  },
+},
     {
       field: 'quotationDate',
       label: 'Issue Date',

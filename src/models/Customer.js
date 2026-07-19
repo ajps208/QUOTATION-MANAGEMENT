@@ -18,4 +18,8 @@ const customerSchema = new mongoose.Schema({
   status: { type: String, default: 'Active' }
 }, { timestamps: true });
 
+customerSchema.index({ businessId: 1, status: 1 });
+customerSchema.index({ businessId: 1, email: 1 });
+customerSchema.index({ email: 1 });
+
 export default mongoose.models.Customer || mongoose.model('Customer', customerSchema);

@@ -1,43 +1,34 @@
 import connectToDatabase from '@/lib/mongodb';
 import Customer from '@/models/Customer';
+import { serialize, toId } from '@/app/api/utils/serializer';
 
-function serialize(doc) {
-  const obj = doc.toObject ? doc.toObject() : doc;
-  obj.id = obj._id.toString();
-  obj.businessId = obj.businessId?.toString();
-  delete obj._id;
-  delete obj.__v;
-  return obj;
-}
+const toCustomer = (doc) => serialize(doc, { businessId: toId });
 
-// GET /api/customers/[id]
 export async function GET(request, { params }) {
   try {
     await connectToDatabase();
     const { id } = await params;
-    const customer = await Customer.findById(id);
+    const customer = await Customer.findById(id).lean({ virtuals: false });
     if (!customer) return Response.json({ error: 'Customer not found' }, { status: 404 });
-    return Response.json(serialize(customer));
+    return Response.json(toCustomer(customer));
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
 
-// PUT /api/customers/[id]
 export async function PUT(request, { params }) {
   try {
     await connectToDatabase();
     const { id } = await params;
     const data = await request.json();
-    const customer = await Customer.findByIdAndUpdate(id, data, { new: true });
+    const customer = await Customer.findByIdAndUpdate(id, data, { new: true }).lean({ virtuals: false });
     if (!customer) return Response.json({ error: 'Customer not found' }, { status: 404 });
-    return Response.json(serialize(customer));
+    return Response.json(toCustomer(customer));
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
 
-// DELETE /api/customers/[id]
 export async function DELETE(request, { params }) {
   try {
     await connectToDatabase();

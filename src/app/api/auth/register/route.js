@@ -4,22 +4,19 @@ import Business from '@/models/Business';
 import QuotationSetting from '@/models/QuotationSetting';
 import { USER_ROLES } from '@/constants/roles';
 
-// POST /api/auth/register
 export async function POST(request) {
   try {
     await connectToDatabase();
     const data = await request.json();
 
-    const existing = await User.findOne({ email: data.email });
+    const existing = await User.findOne({ email: data.email }).select('_id').lean({ virtuals: false });
     if (existing) {
       return Response.json({ error: 'Email already exists' }, { status: 409 });
     }
 
     const avatar = data.name ? data.name.substring(0, 2).toUpperCase() : 'U';
-
     let businessId = null;
 
-    // If registering as a business, create the business record with nested schema
     if (data.role === USER_ROLES.BUSINESS) {
       const newBusiness = await Business.create({
         profile: {
@@ -108,7 +105,6 @@ export async function POST(request) {
       });
       businessId = newBusiness._id;
 
-      // Also create legacy QuotationSetting for backward compatibility
       await QuotationSetting.create({
         businessId: newBusiness._id,
         templateId: null,
@@ -158,6 +154,7 @@ export async function POST(request) {
     const userObj = newUser.toObject();
     const { password: _, ...userWithoutPassword } = userObj;
     userWithoutPassword.id = userObj._id.toString();
+    delete userWithoutPassword._id;
     if (userWithoutPassword.businessId) {
       userWithoutPassword.businessId = userWithoutPassword.businessId.toString();
     }

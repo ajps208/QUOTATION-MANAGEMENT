@@ -82,7 +82,6 @@ function buildSettingsFromBusiness(biz) {
   };
 }
 
-// GET /api/settings?businessId=xxx
 export async function GET(request) {
   try {
     await connectToDatabase();
@@ -90,17 +89,16 @@ export async function GET(request) {
     const businessId = searchParams.get('businessId');
     if (!businessId) return Response.json({ error: 'businessId required' }, { status: 400 });
 
-    // Try reading from the Business model first (new nested schema)
-    const business = await Business.findById(businessId);
+    const business = await Business.findById(businessId).select('quotationSettings branding signatures').lean({ virtuals: false });
     if (business && business.quotationSettings) {
       const settings = buildSettingsFromBusiness(business);
       return Response.json({ id: businessId, businessId, ...settings });
     }
 
-    // Fallback to legacy QuotationSetting model
-    let settings = await QuotationSetting.findOne({ businessId });
+    let settings = await QuotationSetting.findOne({ businessId }).lean({ virtuals: false });
     if (!settings) {
       settings = await QuotationSetting.create({ businessId, ...DEFAULT_SETTINGS });
+      settings = settings.toObject();
     }
     return Response.json(serialize(settings));
   } catch (err) {
@@ -108,7 +106,6 @@ export async function GET(request) {
   }
 }
 
-// POST /api/settings - upsert (backward compatible)
 export async function POST(request) {
   try {
     await connectToDatabase();
@@ -118,8 +115,7 @@ export async function POST(request) {
 
     const { id, _id, createdAt, updatedAt, __v, signatures, ...updateData } = rest;
 
-    // Update the Business model (new nested schema)
-    const business = await Business.findById(businessId);
+    const business = await Business.findById(businessId).lean({ virtuals: false });
     if (business) {
       const brandingUpdate = {};
       if (updateData.primaryColor) brandingUpdate.primaryColor = updateData.primaryColor;
@@ -153,19 +149,18 @@ export async function POST(request) {
         await Business.findByIdAndUpdate(businessId, { $set: qsSet });
       }
 
-      const updatedBiz = await Business.findById(businessId);
+      const updatedBiz = await Business.findById(businessId).select('quotationSettings branding signatures').lean({ virtuals: false });
       const settings = buildSettingsFromBusiness(updatedBiz);
       return Response.json({ id: businessId, businessId, ...settings });
     }
 
-    // Fallback: legacy QuotationSetting model
     const allowedLegacy = { ...updateData };
     delete allowedLegacy.signatures;
     const settings = await QuotationSetting.findOneAndUpdate(
       { businessId },
       { $set: allowedLegacy },
       { new: true, upsert: true }
-    );
+    ).lean({ virtuals: false });
     return Response.json(serialize(settings));
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });

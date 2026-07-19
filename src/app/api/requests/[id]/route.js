@@ -2,68 +2,52 @@ import connectToDatabase from '@/lib/mongodb';
 import QuotationRequest from '@/models/QuotationRequest';
 import Notification from '@/models/Notification';
 import Business from '@/models/Business';
+import { serialize, toId, serializeItems } from '@/app/api/utils/serializer';
 
-function serialize(doc) {
-  const obj = doc.toObject ? doc.toObject() : doc;
-  obj.id = obj._id.toString();
-  obj.customerId = obj.customerId?.toString();
-  obj.businessId = obj.businessId?.toString();
+function toRequest(doc) {
+  const obj = serialize(doc, { customerId: toId, businessId: toId, quotationId: toId, resolvedCustomerId: toId });
   if (obj.items) {
-    obj.items = obj.items.map(item => ({
-      ...item,
-      _id: item._id?.toString(),
-      productId: item.productId?.toString(),
-    }));
+    obj.items = serializeItems(doc.items, { productId: toId });
   }
-  
-  if (obj.quotationId) obj.quotationId = obj.quotationId.toString();
-  if (obj.resolvedCustomerId) obj.resolvedCustomerId = obj.resolvedCustomerId.toString();
-
-  delete obj._id;
-  delete obj.__v;
   return obj;
 }
 
-// GET /api/requests/[id]
 export async function GET(request, { params }) {
   try {
     await connectToDatabase();
     const { id } = await params;
-    const req = await QuotationRequest.findById(id);
+    const req = await QuotationRequest.findById(id).lean({ virtuals: false });
     if (!req) return Response.json({ error: 'Request not found' }, { status: 404 });
-    return Response.json(serialize(req));
+    return Response.json(toRequest(req));
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
 
-// PUT /api/requests/[id]
 export async function PUT(request, { params }) {
   try {
     await connectToDatabase();
     const { id } = await params;
     const data = await request.json();
-    const req = await QuotationRequest.findByIdAndUpdate(id, data, { new: true });
+    const req = await QuotationRequest.findByIdAndUpdate(id, data, { new: true }).lean({ virtuals: false });
     if (!req) return Response.json({ error: 'Request not found' }, { status: 404 });
-    
-    // If request is rejected, send a notification to the customer
+
     if (data.status === 'Rejected' && req.customerId) {
-      const business = await Business.findById(req.businessId);
+      const business = await Business.findById(req.businessId).select('profile.businessName').lean({ virtuals: false });
       await Notification.create({
         userId: req.customerId,
         title: 'Quotation Request Rejected',
-        message: `Your request to ${business?.name || 'the business'} was rejected. Reason: ${req.rejectionReason || 'Not provided'}`,
+        message: `Your request to ${business?.profile?.businessName || 'the business'} was rejected. Reason: ${req.rejectionReason || 'Not provided'}`,
         link: `/customer/requests`,
       });
     }
-    
-    return Response.json(serialize(req));
+
+    return Response.json(toRequest(req));
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });
   }
 }
 
-// DELETE /api/requests/[id]
 export async function DELETE(request, { params }) {
   try {
     await connectToDatabase();

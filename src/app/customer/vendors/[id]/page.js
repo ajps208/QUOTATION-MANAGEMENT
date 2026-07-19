@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Typography, Card, CardContent, Grid, Button, IconButton, Chip, Divider, Badge } from '@mui/material';
+import ProductAvatar from '@/components/common/ProductAvatar';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
@@ -144,7 +145,15 @@ export default function VendorDetailsPage({ params }) {
         <Grid container spacing={{ xs: 2, md: 3 }}>
           {filteredProducts.map((product) => (
             <Grid xs={12} md={6} lg={4} key={product.id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 1 }}>
+              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 1, overflow: 'hidden' }}>
+                <Box sx={{ height: 160, bgcolor: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ProductAvatar
+                    image={product.image}
+                    name={product.name}
+                    size={160}
+                    sx={{ width: '100%', height: '100%', borderRadius: 0 }}
+                  />
+                </Box>
                 <CardContent sx={{ flexGrow: 1, p: 3 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                     <Typography variant="h6" fontWeight={600} sx={{ lineHeight: 1.2, pr: 2 }}>
