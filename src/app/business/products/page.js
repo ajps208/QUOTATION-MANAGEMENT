@@ -13,6 +13,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { useAuthStore } from '@/store/useAuthStore';
 import { productService } from '@/services/productService';
 import { categoryService } from '@/services/categoryService';
+import { TableLoader } from '@/components/common/LoadingState';
 import PageHeader from '@/components/common/PageHeader';
 import AppTable from '@/components/common/AppTable';
 import AppSearch from '@/components/common/AppSearch';

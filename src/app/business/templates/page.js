@@ -153,7 +153,7 @@ export default function TemplatesPage() {
 
   return (
     <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3, flexWrap: 'wrap', gap: 2 }}>
+      <Stack direction="row" sx={{ mb: 3, flexWrap: 'wrap', gap: 2, justifyContent: 'space-between', alignItems: 'center' }}>
         <Box>
           <PageHeader
             title="Quotation Templates"
@@ -272,7 +272,7 @@ export default function TemplatesPage() {
                   </Box>
 
                   <CardContent sx={{ flexGrow: 1, p: 3 }}>
-                    <Stack direction="row" alignItems="center" gap={2} sx={{ mb: 2 }}>
+                    <Stack direction="row" sx={{ alignItems: 'center', gap: 2, mb: 2 }}>
                       <Typography variant="h6" fontWeight={600} sx={{ flex: 1 }}>
                         {template.name}
                       </Typography>

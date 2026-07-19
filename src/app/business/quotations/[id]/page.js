@@ -2,7 +2,7 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Box, Typography, Button, IconButton
+  Box, Typography, Button, IconButton, Alert
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
@@ -18,6 +18,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { QUOTATION_STATUS } from '@/constants/statuses';
 import { formatDate } from '@/utils/formatters';
+import { flattenBusiness } from '@/utils/businessHelpers';
 import StatusChip from '@/components/common/StatusChip';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import QuotationDocument from '@/components/quotation/QuotationDocument';
@@ -89,7 +90,8 @@ export default function QuotationDetailPage({ params }) {
     // Create a public link (assuming frontend runs on window.location.origin)
     // Note: The customer sees it on their end via their own routes.
     // So we just send a generic message or a link to login.
-    const message = `Hello ${customer.name}, your quotation ${quotation.quotationNumber} from ${business.name} is ready.`;
+    const flatBiz = flattenBusiness(business);
+    const message = `Hello ${customer.name}, your quotation ${quotation.quotationNumber} from ${flatBiz.name} is ready.`;
     const encodedMessage = encodeURIComponent(message);
     const url = `https://wa.me/${customer.phone}?text=${encodedMessage}`;
     
@@ -157,6 +159,14 @@ export default function QuotationDetailPage({ params }) {
           </Button>
         )}
       </Box>
+
+      {/* Rejection Reason */}
+      {quotation.status === QUOTATION_STATUS.REJECTED && quotation.rejectionReason && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Rejection Reason</Typography>
+          <Typography variant="body2">{quotation.rejectionReason}</Typography>
+        </Alert>
+      )}
 
       {/* Reusable Document Container */}
       <Box sx={{ display: 'flex', justifyContent: 'center' }}>

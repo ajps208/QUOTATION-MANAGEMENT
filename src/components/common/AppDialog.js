@@ -1,6 +1,7 @@
 'use client';
 
-import { Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Typography, Box, Stack, Button, Alert, LinearProgress, Skeleton, Paper, Divider } from '@mui/material';
+import { useState } from 'react';
+import { Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Typography, Box, Stack, Button, Alert, LinearProgress, Skeleton, Paper, Divider, Grid } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { Refresh, Error, CheckCircle, Info } from '@mui/icons-material';
 
@@ -42,15 +43,15 @@ export default function AppDialog({
       maxWidth={maxWidth}
       fullWidth={fullWidth}
       fullScreen={fullScreen}
-      disableBackdropClick={disableBackdropClick}
-      disableEscapeKeyDown={disableEscapeKeyDown}
       scroll={scroll}
-      PaperProps={{
-        sx: {
-          maxHeight: '90vh',
-          ...PaperProps?.sx,
+      slotProps={{
+        paper: {
+          sx: {
+            maxHeight: '90vh',
+            ...PaperProps?.sx,
+          },
+          ...PaperProps,
         },
-        ...PaperProps,
       }}
       {...props}
     >
@@ -259,11 +260,9 @@ export function ConfirmDialog({
   return (
     <Dialog
       open={open}
-      onClose={onClose}
       maxWidth="xs"
       fullWidth
-      disableBackdropClick={loading}
-      disableEscapeKeyDown={loading}
+      onClose={loading ? undefined : onClose}
     >
       <DialogTitle
         sx={{

@@ -47,7 +47,7 @@ export default function CustomerRequestsPage() {
     setLoading(true);
     setError(null);
     try {
-      const reqs = await quotationRequestService.getRequestsByCustomer(user.id);
+      const reqs = await quotationRequestService.getRequestsByBusiness(user.businessId);
       setRequests(reqs.sort((a, b) => new Date(b.requestDate) - new Date(a.requestDate)));
     } catch (err) {
       setError(err);

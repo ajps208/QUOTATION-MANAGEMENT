@@ -19,22 +19,96 @@ export async function POST(request) {
 
     let businessId = null;
 
-    // If registering as a business, create the business record too
+    // If registering as a business, create the business record with nested schema
     if (data.role === USER_ROLES.BUSINESS) {
       const newBusiness = await Business.create({
-        name: data.businessName || data.company || data.name,
-        ownerName: data.name,
-        email: data.email,
-        phone: data.phone || '',
-        currency: 'INR',
-        taxPercent: 18,
-        quotationPrefix: 'QT',
-        validityDays: 30,
-        industry: data.industry || '',
+        profile: {
+          businessName: data.businessName || data.company || data.name,
+          businessType: '',
+          industry: data.industry || '',
+          description: '',
+        },
+        contact: {
+          email: data.email,
+          phone: data.phone || '',
+          mobile: '',
+          whatsapp: '',
+          website: '',
+        },
+        address: {
+          addressLine1: '',
+          addressLine2: '',
+          city: '',
+          district: '',
+          state: '',
+          country: 'India',
+          postalCode: '',
+        },
+        owner: {
+          ownerName: data.name,
+          designation: '',
+          email: data.email,
+          phone: data.phone || '',
+        },
+        branding: {
+          logo: null,
+          seal: null,
+          primaryColor: '#4f46e5',
+          secondaryColor: '#0ea5e9',
+          accentColor: '#10b981',
+          defaultFont: 'Inter, sans-serif',
+          tagline: '',
+        },
+        signatures: [],
+        quotationSettings: {
+          quotationPrefix: 'QT',
+          currency: 'INR',
+          taxPercent: 18,
+          validityDays: 30,
+          paymentTerms: '',
+          defaultTerms: 'Valid for 30 days.',
+          bankDetails: '',
+          footerText: 'Thank you for your business!',
+          quotationTitle: 'QUOTATION',
+          dateFormat: 'DD MMM YYYY',
+          headerLayout: 'logo-left',
+          tableStyle: 'striped',
+          fontSize: 'md',
+          logoSize: 'md',
+          showLogo: true,
+          showBusinessInfo: true,
+          showCustomerInfo: true,
+          showQuotationNumber: true,
+          showDates: true,
+          showDiscounts: true,
+          showTax: true,
+          showSubtotal: true,
+          showItemNotes: false,
+          showTerms: true,
+          showNotes: true,
+          showSignature: false,
+          showBankDetails: false,
+          showFooter: true,
+        },
+        preferences: {
+          language: 'en',
+          timezone: 'Asia/Kolkata',
+          dateFormat: 'DD MMM YYYY',
+          numberFormat: 'en-IN',
+          emailNotifications: true,
+          autoSave: true,
+        },
+        socialLinks: {
+          facebook: '',
+          instagram: '',
+          linkedin: '',
+          twitter: '',
+          youtube: '',
+        },
       });
       businessId = newBusiness._id;
 
-      // Create default quotation settings for the business
+      // Also create legacy QuotationSetting for backward compatibility
       await QuotationSetting.create({
         businessId: newBusiness._id,
         templateId: null,

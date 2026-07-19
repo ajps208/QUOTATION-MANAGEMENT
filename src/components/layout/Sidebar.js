@@ -42,9 +42,9 @@ const businessNavStructure = [
     icon: <MoreHorizIcon />,
     children: [
       { text: 'Templates', icon: <DescriptionIcon />, path: '/business/templates' },
+      { text: 'Business Settings', icon: <SettingsIcon />, path: '/business/settings' },
       { text: 'Quotation Design', icon: <PaletteIcon />, path: '/business/quotation-settings' },
       { text: 'Notifications', icon: <NotificationsIcon />, path: '/business/notifications' },
-      { text: 'Settings', icon: <SettingsIcon />, path: '/business/settings' },
     ],
   },
 ];

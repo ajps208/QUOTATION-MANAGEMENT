@@ -21,11 +21,10 @@ const client = new MongoClient(mongoUri);
 async function seed() {
   try {
     await client.connect();
-    const db = client.db('Quotely'); // Database name specified previously
+    const db = client.db('quotelydb');
 
-    console.log('Connected to MongoDB Quotely');
+    console.log('Connected to MongoDB quotelydb');
 
-    // Generate specific ObjectIds so we can link them
     const businessId = new ObjectId();
     const adminUserId = new ObjectId();
     const customerId1 = new ObjectId();
@@ -33,7 +32,6 @@ async function seed() {
     const catWebId = new ObjectId();
     const catSeoId = new ObjectId();
 
-    // 1. Clear existing specific collections
     await db.collection('users').deleteMany({});
     await db.collection('businesses').deleteMany({});
     await db.collection('customers').deleteMany({});
@@ -42,33 +40,114 @@ async function seed() {
     await db.collection('quotationsettings').deleteMany({});
     console.log('Cleared existing data.');
 
-    // 2. Create Business
     await db.collection('businesses').insertOne({
       _id: businessId,
-      name: 'TechVision Solutions',
-      email: 'contact@techvision.com',
-      phone: '+1 234 567 8900',
-      address: '123 Tech Park, Silicon Valley, CA 94025',
-      logoUrl: '',
-      website: 'www.techvision.example.com',
-      taxId: 'US123456789',
+      profile: {
+        businessName: 'TechVision Solutions',
+        legalBusinessName: 'TechVision Solutions Pvt Ltd',
+        businessType: 'Private Limited',
+        industry: 'Technology',
+        businessCategory: 'IT Services',
+        registrationNumber: 'REG/2020/TECH001',
+        gstVatNumber: '29AAAAA0000A1Z5',
+        panTaxNumber: 'ABCDE1234F',
+        yearEstablished: '2020',
+        description: 'Full-stack technology solutions provider specializing in web development, mobile apps, and cloud infrastructure.',
+      },
+      contact: {
+        email: 'contact@techvision.com',
+        phone: '+91 98765 43210',
+        mobile: '+91 98765 43211',
+        whatsapp: '+91 98765 43210',
+        website: 'www.techvision.example.com',
+      },
+      address: {
+        addressLine1: '123 Tech Park, Sector 5',
+        addressLine2: 'Building A, 3rd Floor',
+        city: 'Mumbai',
+        district: 'Mumbai Suburban',
+        state: 'Maharashtra',
+        country: 'India',
+        postalCode: '400051',
+      },
+      owner: {
+        ownerName: 'Admin User',
+        designation: 'CEO & Founder',
+        email: 'business@example.com',
+        phone: '+91 98765 43210',
+      },
+      branding: {
+        logo: null,
+        seal: null,
+        primaryColor: '#4f46e5',
+        secondaryColor: '#0ea5e9',
+        accentColor: '#10b981',
+        defaultFont: 'Inter, sans-serif',
+        tagline: 'Innovation Meets Excellence',
+      },
+      signatures: [],
+      quotationSettings: {
+        quotationPrefix: 'QT',
+        currency: 'INR',
+        taxPercent: 18,
+        validityDays: 30,
+        paymentTerms: '50% advance, balance on delivery',
+        defaultTerms: '1. Valid for 30 days.\n2. 50% advance payment required.\n3. Prices are inclusive of applicable taxes.',
+        bankDetails: 'Bank: State Bank of India\nAccount: 123456789\nIFSC: SBIN0001234',
+        footerText: 'Thank you for your business!',
+        quotationTitle: 'QUOTATION',
+        dateFormat: 'DD MMM YYYY',
+        headerLayout: 'logo-left',
+        tableStyle: 'striped',
+        fontSize: 'md',
+        logoSize: 'md',
+        showLogo: true,
+        showBusinessInfo: true,
+        showCustomerInfo: true,
+        showQuotationNumber: true,
+        showDates: true,
+        showDiscounts: true,
+        showTax: true,
+        showSubtotal: true,
+        showItemNotes: false,
+        showTerms: true,
+        showNotes: true,
+        showSignature: false,
+        showBankDetails: true,
+        showFooter: true,
+      },
+      preferences: {
+        language: 'en',
+        timezone: 'Asia/Kolkata',
+        dateFormat: 'DD MMM YYYY',
+        numberFormat: 'en-IN',
+        emailNotifications: true,
+        autoSave: true,
+      },
+      socialLinks: {
+        facebook: '',
+        instagram: '',
+        linkedin: '',
+        twitter: '',
+        youtube: '',
+      },
+      status: 'Active',
+      categories: [catWebId, catSeoId],
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
 
-    // 3. Create Admin User (FIXED ROLE CASING)
     await db.collection('users').insertOne({
       _id: adminUserId,
       name: 'Admin User',
       email: 'business@example.com',
-      password: 'password123', // In a real app this would be hashed
+      password: 'password123',
       role: 'business',
       businessId: businessId,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
 
-    // 4. Create Default Settings for Business
     await db.collection('quotationsettings').insertOne({
       businessId: businessId,
       primaryColor: '#4f46e5',
@@ -102,7 +181,6 @@ async function seed() {
       updatedAt: new Date()
     });
 
-    // 5. Create Customers
     await db.collection('customers').insertMany([
       {
         _id: customerId1,
@@ -130,13 +208,11 @@ async function seed() {
       }
     ]);
 
-    // 6. Create Categories
     await db.collection('categories').insertMany([
       { _id: catWebId, businessId: businessId, name: 'Web Development', description: 'Website building services', status: 'ACTIVE', createdAt: new Date(), updatedAt: new Date() },
       { _id: catSeoId, businessId: businessId, name: 'Marketing', description: 'SEO and Digital Marketing', status: 'ACTIVE', createdAt: new Date(), updatedAt: new Date() }
     ]);
 
-    // 7. Create Products
     await db.collection('products').insertMany([
       {
         businessId: businessId,
@@ -179,7 +255,7 @@ async function seed() {
       }
     ]);
 
-    console.log('✅ Dummy data successfully inserted into MongoDB! (Roles fixed)');
+    console.log('Dummy data successfully inserted into MongoDB with new nested schema!');
 
   } catch (err) {
     console.error('Error seeding data:', err);

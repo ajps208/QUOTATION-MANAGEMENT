@@ -3,11 +3,31 @@ import { Box, Typography, Divider } from '@mui/material';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { calculateQuotationTotals } from '@/utils/quotationCalculations';
 
+function autoFlattenBusiness(biz) {
+  if (!biz) return null;
+  if (biz.profile) {
+    return {
+      id: biz.id,
+      name: biz.profile.businessName || '',
+      logo: biz.branding?.logo || null,
+      email: biz.contact?.email || '',
+      phone: biz.contact?.phone || '',
+      website: biz.contact?.website || '',
+      address: biz.address?.addressLine1 || '',
+      city: biz.address?.city || '',
+      state: biz.address?.state || '',
+      country: biz.address?.country || 'India',
+      postalCode: biz.address?.postalCode || '',
+    };
+  }
+  return biz;
+}
+
 /**
  * QuotationDocument — Reusable A4-style quotation renderer.
  *
  * Props:
- *   business     — object with name, address, city, state, country, email, phone, logo
+ *   business     — flat or nested business object (auto-detected)
  *   customer     — object with name, companyName, billingAddress, city, email, taxNumber
  *   quotation    — quotation object with items, overallDiscount, terms, etc.
  *   settings     — quotationSettings object controlling layout, colors, visibility
@@ -15,7 +35,8 @@ import { calculateQuotationTotals } from '@/utils/quotationCalculations';
  *   printMode    — boolean. When true, removes shadows and renders for print/PDF.
  */
 export default function QuotationDocument({ business, customer, quotation, settings, scale = 1, printMode = false }) {
-  if (!business || !customer || !quotation) return null;
+  const flatBusiness = autoFlattenBusiness(business);
+  if (!flatBusiness || !customer || !quotation) return null;
 
   const cfg = settings || {};
   const primaryColor = cfg.primaryColor || '#4f46e5';
@@ -40,10 +61,10 @@ export default function QuotationDocument({ business, customer, quotation, setti
   // Business info block
   const BusinessInfo = () => (
     <Box>
-      {cfg.showLogo !== false && business.logo && (
+      {cfg.showLogo !== false && flatBusiness.logo && (
         <img
-          src={business.logo}
-          alt={business.name}
+          src={flatBusiness.logo}
+          alt={flatBusiness.name}
           style={{
             height: cfg.logoSize === 'sm' ? 40 : cfg.logoSize === 'lg' ? 80 : 56,
             objectFit: 'contain',
@@ -55,26 +76,26 @@ export default function QuotationDocument({ business, customer, quotation, setti
       {cfg.showBusinessInfo !== false && (
         <>
           <Typography style={{ fontFamily, fontWeight: 700, fontSize: 16, color: '#0f172a', lineHeight: 1.3 }}>
-            {business.name}
+            {flatBusiness.name}
           </Typography>
-          {business.address && (
+          {flatBusiness.address && (
             <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.5, marginTop: 2 }}>
-              {business.address}
+              {flatBusiness.address}
             </Typography>
           )}
-          {(business.city || business.country) && (
+          {(flatBusiness.city || flatBusiness.country) && (
             <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.5 }}>
-              {[business.city, business.state, business.country].filter(Boolean).join(', ')}
+              {[flatBusiness.city, flatBusiness.state, flatBusiness.country].filter(Boolean).join(', ')}
             </Typography>
           )}
-          {business.email && (
+          {flatBusiness.email && (
             <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.5 }}>
-              {business.email}
+              {flatBusiness.email}
             </Typography>
           )}
-          {business.phone && (
+          {flatBusiness.phone && (
             <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.5 }}>
-              {business.phone}
+              {flatBusiness.phone}
             </Typography>
           )}
         </>
@@ -111,17 +132,17 @@ export default function QuotationDocument({ business, customer, quotation, setti
     if (headerLayout === 'centered') {
       return (
         <Box style={{ backgroundColor: primaryColor, padding: '24px 40px', textAlign: 'center' }}>
-          {business.logo && cfg.showLogo !== false && (
-            <img src={business.logo} alt={business.name} style={{ height: 60, objectFit: 'contain', marginBottom: 12, display: 'inline-block' }} />
-          )}
-          <Typography style={{ fontFamily, fontWeight: 700, fontSize: 26, color: '#ffffff', letterSpacing: '0.08em' }}>
-            {quotationTitle}
-          </Typography>
-          {cfg.showBusinessInfo !== false && (
-            <Typography style={{ fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 4 }}>
-              {business.name} • {business.email}
+            {flatBusiness.logo && cfg.showLogo !== false && (
+              <img src={flatBusiness.logo} alt={flatBusiness.name} style={{ height: 60, objectFit: 'contain', marginBottom: 12, display: 'inline-block' }} />
+            )}
+            <Typography style={{ fontFamily, fontWeight: 700, fontSize: 26, color: '#ffffff', letterSpacing: '0.08em' }}>
+              {quotationTitle}
             </Typography>
-          )}
+            {cfg.showBusinessInfo !== false && (
+              <Typography style={{ fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 4 }}>
+                {flatBusiness.name} • {flatBusiness.email}
+              </Typography>
+            )}
         </Box>
       );
     }
@@ -168,10 +189,10 @@ export default function QuotationDocument({ business, customer, quotation, setti
               <Typography style={{ fontFamily, fontSize: 10, fontWeight: 700, color: primaryColor, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
                 From
               </Typography>
-              <Typography style={{ fontFamily, fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{business.name}</Typography>
-              {business.address && <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.5 }}>{business.address}</Typography>}
-              {(business.city || business.country) && <Typography style={{ fontFamily, fontSize: 12, color: '#475569' }}>{[business.city, business.country].filter(Boolean).join(', ')}</Typography>}
-              {business.email && <Typography style={{ fontFamily, fontSize: 12, color: '#475569' }}>{business.email}</Typography>}
+              <Typography style={{ fontFamily, fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{flatBusiness.name}</Typography>
+              {flatBusiness.address && <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.5 }}>{flatBusiness.address}</Typography>}
+              {(flatBusiness.city || flatBusiness.country) && <Typography style={{ fontFamily, fontSize: 12, color: '#475569' }}>{[flatBusiness.city, flatBusiness.country].filter(Boolean).join(', ')}</Typography>}
+              {flatBusiness.email && <Typography style={{ fontFamily, fontSize: 12, color: '#475569' }}>{flatBusiness.email}</Typography>}
             </Box>
             <Box style={{ flex: 1, backgroundColor: '#f8fafc', borderRadius: 8, padding: '16px 20px', borderLeft: `4px solid ${accentColor}` }}>
               <Typography style={{ fontFamily, fontSize: 10, fontWeight: 700, color: accentColor, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
@@ -345,7 +366,7 @@ export default function QuotationDocument({ business, customer, quotation, setti
                 <Box style={{ borderBottom: `1px solid #94a3b8`, marginBottom: 6, height: 48 }} />
               )}
               <Typography style={{ fontFamily, fontSize: 11, color: '#475569' }}>Authorised Signature</Typography>
-              <Typography style={{ fontFamily, fontSize: 11, fontWeight: 600, color: '#334155' }}>{business.name}</Typography>
+              <Typography style={{ fontFamily, fontSize: 11, fontWeight: 600, color: '#334155' }}>{flatBusiness.name}</Typography>
             </Box>
           </Box>
         )}
@@ -357,9 +378,9 @@ export default function QuotationDocument({ business, customer, quotation, setti
           <Typography style={{ fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.9)', fontStyle: 'italic' }}>
             {footerText}
           </Typography>
-          {business.website && (
+          {flatBusiness.website && (
             <Typography style={{ fontFamily, fontSize: 11, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>
-              {business.website}
+              {flatBusiness.website}
             </Typography>
           )}
         </Box>

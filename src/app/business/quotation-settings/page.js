@@ -1,19 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import {
-  Box,
-  Typography,
-  Divider,
-  Switch,
-  FormControlLabel,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  Button,
-  IconButton,
-  Tab,
-  Tabs,
+  Box, Typography, Divider, Switch, FormControlLabel, Select,
+  MenuItem, FormControl, InputLabel, IconButton, Tab, Tabs, Grid,
+  InputAdornment,
 } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -22,10 +12,10 @@ import { useRouter } from "next/navigation";
 
 import { useAuthStore } from "@/store/useAuthStore";
 import { businessService } from "@/services/businessService";
-import { quotationSettingsService } from "@/services/quotationSettingsService";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import QuotationDocument from "@/components/quotation/QuotationDocument";
-import SignatureUploader from "@/components/quotation/SignatureUploader";
+import BusinessSignatureManager from "@/components/business/BusinessSignatureManager";
+import { flattenBusiness, flattenQuotationSettings } from "@/utils/businessHelpers";
 import FormField from "@/components/common/FormField";
 import FormSection from "@/components/common/FormSection";
 import AppButton from "@/components/common/AppButton";
@@ -71,8 +61,11 @@ export default function QuotationSettingsPage() {
   const { showSuccess, showError } = useSnackbar();
 
   const [business, setBusiness] = useState(null);
-  const [settings, setSettings] = useState(null);
+  const [flatBusiness, setFlatBusiness] = useState(null);
+  const [qsSettings, setQsSettings] = useState(null);
   const [initialSettings, setInitialSettings] = useState(null);
+  const [signatures, setSignatures] = useState([]);
+  const [initialSignatures, setInitialSignatures] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
@@ -81,34 +74,84 @@ export default function QuotationSettingsPage() {
     const fetchData = async () => {
       if (!user?.businessId) return;
       try {
-        const [biz, currentSettings] = await Promise.all([
-          businessService.getBusinessById(user.businessId),
-          quotationSettingsService.getSettingsByBusiness(user.businessId),
-        ]);
+        const biz = await businessService.getBusinessById(user.businessId);
         setBusiness(biz);
-        setSettings(currentSettings);
-        setInitialSettings(currentSettings);
-      } catch (err) {
+        setFlatBusiness(flattenBusiness(biz));
+
+        const settings = flattenQuotationSettings(biz);
+        setQsSettings(settings);
+        setInitialSettings(settings);
+
+        const sigs = (biz.signatures || []).map(s => ({
+          _id: s._id,
+          type: s.type,
+          displayName: s.displayName,
+          image: s.image,
+          uploadedBy: s.uploadedBy,
+          uploadedAt: s.uploadedAt,
+          isDefault: s.isDefault,
+          isActive: s.isActive,
+          order: s.order,
+        }));
+        setSignatures(sigs);
+        setInitialSignatures(sigs);
+      } catch {
         showError("Failed to load settings");
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, [user]);
+  }, [user, showError]);
 
-  const handleChange = (field, value) => {
-    setSettings((prev) => ({ ...prev, [field]: value }));
+  const handleSettingChange = (field, value) => {
+    setQsSettings((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const saved = await quotationSettingsService.updateSettings(user.businessId, settings);
-      setSettings(saved);
-      setInitialSettings(saved);
+      const updatedBiz = await businessService.updateSection(user.businessId, 'quotation-defaults', {
+        quotationPrefix: qsSettings.quotationPrefix,
+        currency: qsSettings.currency,
+        taxPercent: qsSettings.taxPercent,
+        validityDays: qsSettings.validityDays,
+        paymentTerms: qsSettings.paymentTerms,
+        defaultTerms: qsSettings.defaultTerms,
+        bankDetails: qsSettings.bankDetails,
+        footerText: qsSettings.footerText,
+        quotationTitle: qsSettings.quotationTitle,
+        dateFormat: qsSettings.dateFormat,
+        headerLayout: qsSettings.headerLayout,
+        tableStyle: qsSettings.tableStyle,
+        fontSize: qsSettings.fontSize,
+        logoSize: qsSettings.logoSize,
+        showLogo: qsSettings.showLogo,
+        showBusinessInfo: qsSettings.showBusinessInfo,
+        showCustomerInfo: qsSettings.showCustomerInfo,
+        showQuotationNumber: qsSettings.showQuotationNumber,
+        showDates: qsSettings.showDates,
+        showDiscounts: qsSettings.showDiscounts,
+        showTax: qsSettings.showTax,
+        showSubtotal: qsSettings.showSubtotal,
+        showItemNotes: qsSettings.showItemNotes,
+        showTerms: qsSettings.showTerms,
+        showNotes: qsSettings.showNotes,
+        showSignature: qsSettings.showSignature,
+        showBankDetails: qsSettings.showBankDetails,
+        showFooter: qsSettings.showFooter,
+      });
+
+      await businessService.updateSignatures(user.businessId, signatures);
+
+      setBusiness(updatedBiz);
+      setFlatBusiness(flattenBusiness(updatedBiz));
+      const settings = flattenQuotationSettings(updatedBiz);
+      setQsSettings(settings);
+      setInitialSettings(settings);
+      setInitialSignatures([...signatures]);
       showSuccess("Quotation design saved successfully");
-    } catch (err) {
+    } catch {
       showError("Failed to save settings");
     } finally {
       setSaving(false);
@@ -116,7 +159,8 @@ export default function QuotationSettingsPage() {
   };
 
   const handleReset = () => {
-    setSettings(initialSettings);
+    setQsSettings(initialSettings);
+    setSignatures(initialSignatures.map(s => ({ ...s })));
   };
 
   if (loading) {
@@ -126,15 +170,13 @@ export default function QuotationSettingsPage() {
       </Box>
     );
   }
-  if (!settings) return null;
+  if (!qsSettings) return null;
 
-  const hasChanges = JSON.stringify(settings) !== JSON.stringify(initialSettings);
-
-  const fontOptions = FONTS.map(f => ({ value: f.value, label: f.label }));
+  const hasChanges = JSON.stringify(qsSettings) !== JSON.stringify(initialSettings) ||
+    JSON.stringify(signatures) !== JSON.stringify(initialSignatures);
 
   return (
     <Box sx={{ overflow: 'hidden' }}>
-      {/* Top Action Bar */}
       <Box
         sx={{
           display: "flex",
@@ -150,7 +192,7 @@ export default function QuotationSettingsPage() {
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1, minWidth: 0 }}>
           <IconButton
-            onClick={() => router.push("/business/templates")}
+            onClick={() => router.push("/business/settings")}
             sx={{ bgcolor: "grey.100", border: '1px solid', borderColor: 'divider', flexShrink: 0 }}
           >
             <ArrowBackIcon />
@@ -186,7 +228,6 @@ export default function QuotationSettingsPage() {
         </Box>
       </Box>
 
-      {/* Tabs */}
       <Tabs
         value={activeTab}
         onChange={(e, v) => setActiveTab(v)}
@@ -199,9 +240,7 @@ export default function QuotationSettingsPage() {
         <Tab label="Signatures" />
       </Tabs>
 
-      {/* Settings Content */}
       <Box sx={{ p: { xs: 2, md: 3 }, overflowY: "auto" }}>
-        {/* Branding Tab */}
         {activeTab === 0 && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3, maxWidth: 600, mx: "auto" }}>
             <FormSection title="Colors" description="Set your brand colors for the quotation document">
@@ -209,21 +248,13 @@ export default function QuotationSettingsPage() {
                 <FormField
                   fullWidth
                   label="Primary Color (Hex)"
-                  value={settings.primaryColor}
-                  onChange={(e) => handleChange("primaryColor", e.target.value)}
+                  value={qsSettings.primaryColor}
+                  onChange={(e) => handleSettingChange("primaryColor", e.target.value)}
                   placeholder="#4F46E5"
                   slotProps={{
                     input: {
                       startAdornment: (
-                        <Box sx={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: 0.5,
-                          bgcolor: settings.primaryColor,
-                          mr: 1,
-                          border: "1px solid #E2E8F0",
-                          flexShrink: 0,
-                        }} />
+                        <Box sx={{ width: 24, height: 24, borderRadius: 0.5, bgcolor: qsSettings.primaryColor, mr: 1, border: "1px solid #E2E8F0", flexShrink: 0 }} />
                       ),
                     },
                   }}
@@ -231,21 +262,13 @@ export default function QuotationSettingsPage() {
                 <FormField
                   fullWidth
                   label="Accent Color (Hex)"
-                  value={settings.accentColor}
-                  onChange={(e) => handleChange("accentColor", e.target.value)}
+                  value={qsSettings.accentColor}
+                  onChange={(e) => handleSettingChange("accentColor", e.target.value)}
                   placeholder="#0EA5E9"
                   slotProps={{
                     input: {
                       startAdornment: (
-                        <Box sx={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: 0.5,
-                          bgcolor: settings.accentColor,
-                          mr: 1,
-                          border: "1px solid #E2E8F0",
-                          flexShrink: 0,
-                        }} />
+                        <Box sx={{ width: 24, height: 24, borderRadius: 0.5, bgcolor: qsSettings.accentColor, mr: 1, border: "1px solid #E2E8F0", flexShrink: 0 }} />
                       ),
                     },
                   }}
@@ -257,9 +280,9 @@ export default function QuotationSettingsPage() {
               <FormControl fullWidth>
                 <InputLabel sx={{ whiteSpace: 'normal', overflow: 'visible', textOverflow: 'clip' }}>Font Family</InputLabel>
                 <Select
-                  value={settings.fontFamily}
+                  value={qsSettings.fontFamily}
                   label="Font Family"
-                  onChange={(e) => handleChange("fontFamily", e.target.value)}
+                  onChange={(e) => handleSettingChange("fontFamily", e.target.value)}
                 >
                   {FONTS.map((f) => (
                     <MenuItem key={f.value} value={f.value} style={{ fontFamily: f.value }}>
@@ -274,18 +297,18 @@ export default function QuotationSettingsPage() {
               <FormControlLabel
                 control={
                   <Switch
-                    checked={settings.showLogo}
-                    onChange={(e) => handleChange("showLogo", e.target.checked)}
+                    checked={qsSettings.showLogo}
+                    onChange={(e) => handleSettingChange("showLogo", e.target.checked)}
                   />
                 }
                 label="Show Logo in Header"
               />
-              <FormControl fullWidth disabled={!settings.showLogo} sx={{ mt: 2 }}>
+              <FormControl fullWidth disabled={!qsSettings.showLogo} sx={{ mt: 2 }}>
                 <InputLabel sx={{ whiteSpace: 'normal', overflow: 'visible', textOverflow: 'clip' }}>Logo Size</InputLabel>
                 <Select
-                  value={settings.logoSize}
+                  value={qsSettings.logoSize}
                   label="Logo Size"
-                  onChange={(e) => handleChange("logoSize", e.target.value)}
+                  onChange={(e) => handleSettingChange("logoSize", e.target.value)}
                 >
                   <MenuItem value="sm">Small</MenuItem>
                   <MenuItem value="md">Medium</MenuItem>
@@ -296,16 +319,15 @@ export default function QuotationSettingsPage() {
           </Box>
         )}
 
-        {/* Layout Tab */}
         {activeTab === 1 && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3, maxWidth: 600, mx: "auto" }}>
             <FormSection title="Header Style" description="Choose the layout for the document header">
               <FormControl fullWidth>
                 <InputLabel sx={{ whiteSpace: 'normal', overflow: 'visible', textOverflow: 'clip' }}>Layout Style</InputLabel>
                 <Select
-                  value={settings.headerLayout}
+                  value={qsSettings.headerLayout}
                   label="Layout Style"
-                  onChange={(e) => handleChange("headerLayout", e.target.value)}
+                  onChange={(e) => handleSettingChange("headerLayout", e.target.value)}
                 >
                   <MenuItem value="logo-left">Logo Left, Details Right</MenuItem>
                   <MenuItem value="logo-right">Details Left, Logo Right</MenuItem>
@@ -318,9 +340,9 @@ export default function QuotationSettingsPage() {
               <FormControl fullWidth>
                 <InputLabel sx={{ whiteSpace: 'normal', overflow: 'visible', textOverflow: 'clip' }}>Row Style</InputLabel>
                 <Select
-                  value={settings.tableStyle}
+                  value={qsSettings.tableStyle}
                   label="Row Style"
-                  onChange={(e) => handleChange("tableStyle", e.target.value)}
+                  onChange={(e) => handleSettingChange("tableStyle", e.target.value)}
                 >
                   <MenuItem value="striped">Striped Rows</MenuItem>
                   <MenuItem value="bordered">Full Borders</MenuItem>
@@ -345,8 +367,8 @@ export default function QuotationSettingsPage() {
                     key={field}
                     control={
                       <Switch
-                        checked={settings[field]}
-                        onChange={(e) => handleChange(field, e.target.checked)}
+                        checked={qsSettings[field]}
+                        onChange={(e) => handleSettingChange(field, e.target.checked)}
                         size="small"
                       />
                     }
@@ -358,15 +380,14 @@ export default function QuotationSettingsPage() {
           </Box>
         )}
 
-        {/* Content Tab */}
         {activeTab === 2 && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3, maxWidth: 600, mx: "auto" }}>
             <FormSection title="Document Content" description="Customize default text content for quotations">
               <FormField
                 fullWidth
                 label="Document Title"
-                value={settings.quotationTitle}
-                onChange={(e) => handleChange("quotationTitle", e.target.value)}
+                value={qsSettings.quotationTitle}
+                onChange={(e) => handleSettingChange("quotationTitle", e.target.value)}
                 placeholder="Quotation"
               />
               <FormField
@@ -374,8 +395,8 @@ export default function QuotationSettingsPage() {
                 multiline
                 rows={3}
                 label="Default Terms & Conditions"
-                value={settings.defaultTerms}
-                onChange={(e) => handleChange("defaultTerms", e.target.value)}
+                value={qsSettings.defaultTerms}
+                onChange={(e) => handleSettingChange("defaultTerms", e.target.value)}
                 placeholder="Valid for 30 days..."
                 helperText="Used when a quotation doesn't have custom terms."
               />
@@ -384,39 +405,38 @@ export default function QuotationSettingsPage() {
                 multiline
                 rows={3}
                 label="Bank / Payment Details"
-                value={settings.bankDetails}
-                onChange={(e) => handleChange("bankDetails", e.target.value)}
+                value={qsSettings.bankDetails}
+                onChange={(e) => handleSettingChange("bankDetails", e.target.value)}
                 placeholder="Bank name, Account number, IFSC..."
               />
               <FormField
                 fullWidth
                 label="Footer Text"
-                value={settings.footerText}
-                onChange={(e) => handleChange("footerText", e.target.value)}
+                value={qsSettings.footerText}
+                onChange={(e) => handleSettingChange("footerText", e.target.value)}
                 placeholder="Thank you for your business!"
               />
             </FormSection>
           </Box>
         )}
 
-        {/* Signatures Tab */}
         {activeTab === 3 && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3, maxWidth: 600, mx: "auto" }}>
-            <FormSection title="Signatures" description="Manage signature images used in your quotation documents">
+            <FormSection title="Signatures" description="Manage signature images for your quotation documents">
               <FormControlLabel
                 control={
                   <Switch
-                    checked={settings.showSignature}
-                    onChange={(e) => handleChange("showSignature", e.target.checked)}
+                    checked={qsSettings.showSignature}
+                    onChange={(e) => handleSettingChange("showSignature", e.target.checked)}
                   />
                 }
                 label="Show Signature on Documents"
               />
-              {settings.showSignature && (
+              {qsSettings.showSignature && (
                 <Box sx={{ mt: 3 }}>
-                  <SignatureUploader
-                    signatures={settings.signatures || []}
-                    onChange={(sigs) => handleChange("signatures", sigs)}
+                  <BusinessSignatureManager
+                    signatures={signatures}
+                    onChange={setSignatures}
                   />
                 </Box>
               )}
@@ -424,7 +444,6 @@ export default function QuotationSettingsPage() {
           </Box>
         )}
 
-        {/* Live Preview */}
         <Box sx={{ mt: 3, display: "flex", justifyContent: "center" }}>
           <Box
             sx={{
@@ -447,12 +466,12 @@ export default function QuotationSettingsPage() {
                 width: A4_WIDTH,
               }}
             >
-              {business && (
+              {flatBusiness && (
                 <QuotationDocument
-                  business={business}
+                  business={flatBusiness}
                   customer={SAMPLE_CUSTOMER}
                   quotation={SAMPLE_QUOTATION}
-                  settings={settings}
+                  settings={qsSettings}
                   scale={1}
                   printMode
                 />

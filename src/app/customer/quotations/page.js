@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Typography, Button, Card, Chip, Stack, Tooltip, IconButton } from '@mui/material';
+import { Box, Typography, Button, Card, Stack, Tooltip, IconButton } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
@@ -21,6 +21,25 @@ import { useSnackbar } from '@/hooks/useSnackbar';
 import { QUOTATION_STATUS } from '@/constants/statuses';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { calculateQuotationTotals } from '@/utils/quotationCalculations';
+
+const VIEWABLE_STATUSES = [QUOTATION_STATUS.SENT];
+
+function getViewTooltip(status) {
+  switch (status) {
+    case QUOTATION_STATUS.DRAFT:
+      return 'This quotation has not been sent yet.';
+    case QUOTATION_STATUS.VIEWED:
+    case QUOTATION_STATUS.ACCEPTED:
+    case QUOTATION_STATUS.REJECTED:
+    case QUOTATION_STATUS.EXPIRED:
+    case QUOTATION_STATUS.CANCELLED:
+    case QUOTATION_STATUS.CHANGES_REQUESTED:
+    case QUOTATION_STATUS.REVISED:
+      return 'Quotation details can only be viewed when the status is Sent.';
+    default:
+      return 'View quotation details';
+  }
+}
 
 export default function CustomerQuotationsPage() {
   const router = useRouter();
@@ -68,9 +87,11 @@ export default function CustomerQuotationsPage() {
     });
   }, [quotations, search, statusFilter, businesses]);
 
-  const statusOptions = useMemo(() => 
+  const statusOptions = useMemo(() =>
     Object.values(QUOTATION_STATUS).map(s => ({ label: s, value: s }))
   , []);
+
+  const isViewable = (status) => VIEWABLE_STATUSES.includes(status);
 
   const columns = [
     { field: 'quotationNumber', label: 'Quotation #' },
@@ -82,9 +103,15 @@ export default function CustomerQuotationsPage() {
     },
     {
       field: 'quotationDate',
-      label: 'Date',
+      label: 'Issue Date',
       hideOnMobile: true,
       render: (row) => formatDate(row.quotationDate),
+    },
+    {
+      field: 'expiryDate',
+      label: 'Expiry Date',
+      hideOnMobile: true,
+      render: (row) => formatDate(row.expiryDate),
     },
     {
       field: 'grandTotal',
@@ -103,7 +130,22 @@ export default function CustomerQuotationsPage() {
       field: 'status',
       label: 'Status',
       align: 'center',
-      render: (row) => <StatusChip status={row.status} />,
+      render: (row) => (
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+          <StatusChip status={row.status} />
+          {row.status === QUOTATION_STATUS.REJECTED && row.rejectionReason && (
+            <Tooltip title={row.rejectionReason} arrow placement="top">
+              <Typography
+                variant="caption"
+                color="error.main"
+                sx={{ cursor: 'help', textDecoration: 'underline dotted', lineHeight: 1.2, textAlign: 'center', maxWidth: 120 }}
+              >
+                View reason
+              </Typography>
+            </Tooltip>
+          )}
+        </Box>
+      ),
     },
     {
       field: 'actions',
@@ -111,15 +153,23 @@ export default function CustomerQuotationsPage() {
       align: 'right',
       width: 120,
       render: (row) => (
-        <Tooltip title="View">
-          <Button
-            size="small"
-            startIcon={<VisibilityIcon />}
-            onClick={() => router.push(`/customer/quotations/${row.id}`)}
-            sx={{ minWidth: 80 }}
-          >
-            View
-          </Button>
+        <Tooltip title={getViewTooltip(row.status)}>
+          <span>
+            <Button
+              size="small"
+              startIcon={<VisibilityIcon />}
+              disabled={!isViewable(row.status)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isViewable(row.status)) {
+                  router.push(`/customer/quotations/${row.id}`);
+                }
+              }}
+              sx={{ minWidth: 80 }}
+            >
+              View
+            </Button>
+          </span>
         </Tooltip>
       ),
     },
@@ -177,7 +227,11 @@ export default function CustomerQuotationsPage() {
           loading={loading}
           error={error}
           onRetry={handleRefresh}
-          onRowClick={(row) => router.push(`/customer/quotations/${row.id}`)}
+          onRowClick={(row) => {
+            if (isViewable(row.status)) {
+              router.push(`/customer/quotations/${row.id}`);
+            }
+          }}
           emptyState={
             <EmptyState
               title="No quotations received yet"

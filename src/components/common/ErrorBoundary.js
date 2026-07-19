@@ -145,7 +145,7 @@ function ErrorBoundaryFallback({
           borderRadius: 3,
         }}
       >
-        <Stack spacing={3} alignItems="center" textAlign="center">
+        <Stack spacing={3} sx={{ alignItems: 'center', textAlign: 'center' }}>
           <Box sx={{ 
             width: 80, 
             height: 80, 

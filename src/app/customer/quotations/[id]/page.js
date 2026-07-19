@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Box, Typography, Button, IconButton
+  Box, Typography, Button, IconButton, Alert,
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -15,7 +16,7 @@ import { businessService } from '@/services/businessService';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { QUOTATION_STATUS } from '@/constants/statuses';
-import { formatCurrency, formatDate } from '@/utils/formatters';
+import { formatDate } from '@/utils/formatters';
 import StatusChip from '@/components/common/StatusChip';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import QuotationDocument from '@/components/quotation/QuotationDocument';
@@ -32,13 +33,21 @@ export default function CustomerQuotationDetailPage({ params }) {
   const [business, setBusiness] = useState(null);
   const [loading, setLoading] = useState(true);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const initRef = useRef(null);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const quot = await quotationService.getQuotationById(id);
+      const quot = await quotationService.getQuotationById(id, user?.id);
       setQuotation(quot);
+
+      if (quot.status !== QUOTATION_STATUS.SENT) {
+        showError('Quotation details are only available when the quotation has been sent.');
+        router.push('/customer/quotations');
+        return;
+      }
 
       const [cust, biz] = await Promise.all([
         customerService.getCustomerById(quot.customerId).catch(() => null),
@@ -47,7 +56,7 @@ export default function CustomerQuotationDetailPage({ params }) {
       setCustomer(cust);
       setBusiness(biz);
     } catch (err) {
-      showError('Quotation not found');
+      showError('Quotation not found or not available for viewing.');
       router.push('/customer/quotations');
     } finally {
       setLoading(false);
@@ -61,16 +70,27 @@ export default function CustomerQuotationDetailPage({ params }) {
     }
   }, [id]);
 
-  const handleStatusChange = async (status) => {
+  const handleStatusChange = async (status, reason) => {
     try {
-      await quotationService.updateQuotationStatus(id, status);
+      const updates = { status };
+      if (status === QUOTATION_STATUS.REJECTED && reason) {
+        updates.rejectionReason = reason;
+      }
+      await quotationService.updateQuotation(id, updates);
       showSuccess(`Quotation ${status.toLowerCase()}`);
       fetchData();
     } catch (err) {
       showError('Failed to update status');
     } finally {
       setConfirmAction(null);
+      setRejectDialogOpen(false);
+      setRejectReason('');
     }
+  };
+
+  const handleRejectSubmit = () => {
+    if (!rejectReason.trim()) return;
+    handleStatusChange(QUOTATION_STATUS.REJECTED, rejectReason.trim());
   };
 
   if (loading) return <Typography sx={{ mt: 4 }}>Loading quotation...</Typography>;
@@ -102,12 +122,7 @@ export default function CustomerQuotationDetailPage({ params }) {
               variant="outlined"
               color="error"
               startIcon={<CancelIcon />}
-              onClick={() => setConfirmAction({
-                title: 'Reject Quotation',
-                message: 'Are you sure you want to reject this quotation?',
-                status: QUOTATION_STATUS.REJECTED,
-                color: 'error'
-              })}
+              onClick={() => setRejectDialogOpen(true)}
             >
               Reject
             </Button>
@@ -134,7 +149,15 @@ export default function CustomerQuotationDetailPage({ params }) {
         )}
       </Box>
 
-      {/* Quotation Document — identical to business view */}
+      {/* Rejection Reason */}
+      {quotation.status === QUOTATION_STATUS.REJECTED && quotation.rejectionReason && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Rejection Reason</Typography>
+          <Typography variant="body2">{quotation.rejectionReason}</Typography>
+        </Alert>
+      )}
+
+      {/* Quotation Document */}
       <Box sx={{ display: 'flex', justifyContent: 'center' }}>
         <Box className="print-container">
           <QuotationDocument
@@ -148,6 +171,7 @@ export default function CustomerQuotationDetailPage({ params }) {
         </Box>
       </Box>
 
+      {/* Accept Confirmation Dialog */}
       {confirmAction && (
         <ConfirmDialog
           open={!!confirmAction}
@@ -159,6 +183,39 @@ export default function CustomerQuotationDetailPage({ params }) {
           onCancel={() => setConfirmAction(null)}
         />
       )}
+
+      {/* Reject Dialog with Reason */}
+      <Dialog open={rejectDialogOpen} onClose={() => { setRejectDialogOpen(false); setRejectReason(''); }} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 600 }}>Reject Quotation</DialogTitle>
+        <DialogContent sx={{ pb: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Please provide a reason for rejecting {quotation.quotationNumber}.
+          </Typography>
+          <TextField
+            autoFocus
+            multiline
+            rows={3}
+            fullWidth
+            label="Rejection Reason"
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="Enter the reason for rejection..."
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+          <Button onClick={() => { setRejectDialogOpen(false); setRejectReason(''); }} color="inherit">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleRejectSubmit}
+            color="error"
+            variant="contained"
+            disabled={!rejectReason.trim()}
+          >
+            Reject
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

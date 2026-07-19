@@ -10,8 +10,11 @@ export const quotationService = {
     return data;
   },
 
-  async getQuotationById(id) {
-    const res = await fetch(`/api/quotations/${id}`);
+  async getQuotationById(id, userId) {
+    const params = new URLSearchParams();
+    if (userId) params.set('userId', userId);
+    const qs = params.toString();
+    const res = await fetch(`/api/quotations/${id}${qs ? `?${qs}` : ''}`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Quotation not found');
     return data;

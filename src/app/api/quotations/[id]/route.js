@@ -36,8 +36,28 @@ export async function GET(request, { params }) {
   try {
     await connectToDatabase();
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+
     const quotation = await Quotation.findById(id);
     if (!quotation) return Response.json({ error: 'Quotation not found' }, { status: 404 });
+
+    if (userId) {
+      const user = await User.findById(userId).select('email role');
+      if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+
+      if (user.role === 'customer') {
+        const customerRecords = await Customer.find({ email: user.email }).select('_id');
+        const customerIds = customerRecords.map(c => c._id.toString());
+        if (!customerIds.includes(quotation.customerId.toString())) {
+          return Response.json({ error: 'Quotation not found' }, { status: 404 });
+        }
+        if (quotation.status !== QUOTATION_STATUS.SENT) {
+          return Response.json({ error: 'Quotation details are only available for sent quotations' }, { status: 403 });
+        }
+      }
+    }
+
     return Response.json(serialize(quotation));
   } catch (err) {
     return Response.json({ error: err.message }, { status: 500 });

@@ -1,14 +1,6 @@
 import connectToDatabase from '@/lib/mongodb';
 import Business from '@/models/Business';
-
-function serializeBusiness(doc) {
-  const obj = doc.toObject ? doc.toObject() : doc;
-  obj.id = obj._id.toString();
-  delete obj._id;
-  delete obj.__v;
-  if (obj.categories) obj.categories = obj.categories.map(c => c.toString());
-  return obj;
-}
+import { serializeBusiness } from './utils';
 
 // GET /api/business - Get all businesses
 export async function GET() {

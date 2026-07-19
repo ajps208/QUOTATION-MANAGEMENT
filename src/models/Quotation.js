@@ -44,6 +44,7 @@ const quotationSchema = new mongoose.Schema({
     enum: Object.values(QUOTATION_STATUS),
     default: QUOTATION_STATUS.DRAFT 
   },
+  rejectionReason: { type: String, default: null },
   revision: { type: Number, default: 0 },
   settings: { type: mongoose.Schema.Types.Mixed, default: null }
 }, { timestamps: true });
