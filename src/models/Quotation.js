@@ -46,6 +46,7 @@ const quotationSchema = new mongoose.Schema({
   },
   rejectionReason: { type: String, default: null },
   revision: { type: Number, default: 0 },
+  allowedCustomerEdit: { type: Boolean, default: false },
   settings: { type: mongoose.Schema.Types.Mixed, default: null }
 }, { timestamps: true });
 

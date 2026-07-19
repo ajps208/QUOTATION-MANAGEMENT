@@ -64,4 +64,33 @@ export const quotationService = {
   async getQuotationsByUser(userId) {
     return this.getQuotations(null, null, userId);
   },
+
+  async getRevisions(quotationId) {
+    const res = await fetch(`/api/quotations/${quotationId}/revisions`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch revisions');
+    return data;
+  },
+
+  async submitRevision(quotationId, payload) {
+    const res = await fetch(`/api/quotations/${quotationId}/submit-revision`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to submit revision');
+    return data;
+  },
+
+  async businessAction(quotationId, payload) {
+    const res = await fetch(`/api/quotations/${quotationId}/business-action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to perform action');
+    return data;
+  },
 };

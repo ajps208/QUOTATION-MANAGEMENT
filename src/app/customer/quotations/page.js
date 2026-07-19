@@ -22,7 +22,12 @@ import { QUOTATION_STATUS } from '@/constants/statuses';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { calculateQuotationTotals } from '@/utils/quotationCalculations';
 
-const VIEWABLE_STATUSES = [QUOTATION_STATUS.SENT];
+const VIEWABLE_STATUSES = [
+  QUOTATION_STATUS.SENT,
+  QUOTATION_STATUS.REVISION_REQUESTED,
+  QUOTATION_STATUS.PENDING_BUSINESS_APPROVAL,
+  QUOTATION_STATUS.APPROVED,
+];
 
 function getViewTooltip(status) {
   switch (status) {
@@ -35,7 +40,7 @@ function getViewTooltip(status) {
     case QUOTATION_STATUS.CANCELLED:
     case QUOTATION_STATUS.CHANGES_REQUESTED:
     case QUOTATION_STATUS.REVISED:
-      return 'Quotation details can only be viewed when the status is Sent.';
+      return 'Quotation details can only be viewed when the quotation is Sent, Pending Approval, or Revision Requested.';
     default:
       return 'View quotation details';
   }

@@ -54,7 +54,7 @@ export async function GET(request) {
     }
 
     const quotations = await Quotation.find(query)
-      .select('quotationNumber businessId customerId requestId quotationDate expiryDate currency items overallDiscount specialDiscounts additionalCharges paymentTerms terms businessNotes customerNotes status rejectionReason revision settings createdAt updatedAt')
+      .select('quotationNumber businessId customerId requestId quotationDate expiryDate currency items overallDiscount specialDiscounts additionalCharges paymentTerms terms businessNotes customerNotes status rejectionReason revision allowedCustomerEdit settings createdAt updatedAt')
       .sort({ createdAt: -1 })
       .lean({ virtuals: false });
 

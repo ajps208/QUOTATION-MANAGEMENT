@@ -2,13 +2,18 @@
 import { useState, useEffect, use, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Box, Typography, Button, IconButton, Alert
+  Box, Typography, Button, IconButton, Alert,
+  Tabs, Tab, Dialog, DialogTitle, DialogContent, DialogActions,
+  TextField,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SendIcon from '@mui/icons-material/Send';
 import CancelIcon from '@mui/icons-material/Cancel';
 import PrintIcon from '@mui/icons-material/Print';
 import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import EditIcon from '@mui/icons-material/Edit';
+import HistoryIcon from '@mui/icons-material/History';
 
 import { quotationService } from '@/services/quotationService';
 import { customerService } from '@/services/customerService';
@@ -22,6 +27,8 @@ import { flattenBusiness } from '@/utils/businessHelpers';
 import StatusChip from '@/components/common/StatusChip';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import QuotationDocument from '@/components/quotation/QuotationDocument';
+import RevisionDiffView from '@/components/quotation/RevisionDiffView';
+import RevisionTimeline from '@/components/quotation/RevisionTimeline';
 
 const A4_WIDTH = 794;
 const A4_HEIGHT = 1123;
@@ -67,6 +74,17 @@ export default function QuotationDetailPage({ params }) {
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
+  const [revisionRefreshKey, setRevisionRefreshKey] = useState(0);
+
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [requestChangesOpen, setRequestChangesOpen] = useState(false);
+  const [requestChangesRemarks, setRequestChangesRemarks] = useState('');
+  const [editSendOpen, setEditSendOpen] = useState(false);
+  const [editSendRemarks, setEditSendRemarks] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+  const initRef = useRef(null);
 
   const fetchData = async () => {
     try {
@@ -93,7 +111,10 @@ export default function QuotationDetailPage({ params }) {
   };
 
   useEffect(() => {
-    if (id) fetchData();
+    if (id && !initRef.current) {
+      initRef.current = true;
+      fetchData();
+    }
   }, [id]);
 
   const handleStatusChange = async (status) => {
@@ -108,6 +129,36 @@ export default function QuotationDetailPage({ params }) {
     }
   };
 
+  const handleBusinessAction = async (action, payload = {}) => {
+    try {
+      setActionLoading(true);
+      await quotationService.businessAction(id, {
+        userId: user?.id,
+        action,
+        ...payload,
+      });
+      const messages = {
+        approve: 'Revision approved',
+        reject: 'Revision rejected',
+        request_changes: 'Changes requested',
+        edit_and_send: 'Quotation updated and sent',
+      };
+      showSuccess(messages[action] || 'Action completed');
+      setRevisionRefreshKey(prev => prev + 1);
+      fetchData();
+    } catch (err) {
+      showError(err.message || 'Failed to perform action');
+    } finally {
+      setActionLoading(false);
+      setRejectDialogOpen(false);
+      setRejectReason('');
+      setRequestChangesOpen(false);
+      setRequestChangesRemarks('');
+      setEditSendOpen(false);
+      setEditSendRemarks('');
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -118,15 +169,11 @@ export default function QuotationDetailPage({ params }) {
       return;
     }
     
-    // Create a public link (assuming frontend runs on window.location.origin)
-    // Note: The customer sees it on their end via their own routes.
-    // So we just send a generic message or a link to login.
     const flatBiz = flattenBusiness(business);
     const message = `Hello ${customer.name}, your quotation ${quotation.quotationNumber} from ${flatBiz.name} is ready.`;
     const encodedMessage = encodeURIComponent(message);
     const url = `https://wa.me/${customer.phone}?text=${encodedMessage}`;
     
-    // Open in new tab
     window.open(url, '_blank');
   };
 
@@ -135,6 +182,7 @@ export default function QuotationDetailPage({ params }) {
 
   const canSend = quotation.status === QUOTATION_STATUS.DRAFT;
   const canCancel = ![QUOTATION_STATUS.CANCELLED, QUOTATION_STATUS.ACCEPTED].includes(quotation.status);
+  const isPendingApproval = quotation.status === QUOTATION_STATUS.PENDING_BUSINESS_APPROVAL;
 
   return (
     <Box>
@@ -148,6 +196,9 @@ export default function QuotationDetailPage({ params }) {
           <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
             Created {formatDate(quotation.createdAt)} • Expires {formatDate(quotation.expiryDate)}
           </Typography>
+          {quotation.revision > 0 && (
+            <Typography variant="caption" color="text.secondary">Revision {quotation.revision}</Typography>
+          )}
         </Box>
         <StatusChip status={quotation.status} />
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
@@ -194,6 +245,37 @@ export default function QuotationDetailPage({ params }) {
         </Box>
       </Box>
 
+      {/* Pending Business Approval Actions */}
+      {isPendingApproval && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 3 }}
+          action={
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Button size="small" variant="contained" color="success" startIcon={<CheckCircleIcon />}
+                onClick={() => handleBusinessAction('approve')} disabled={actionLoading}>
+                Approve
+              </Button>
+              <Button size="small" variant="outlined" color="error"
+                onClick={() => setRejectDialogOpen(true)} disabled={actionLoading}>
+                Reject
+              </Button>
+              <Button size="small" variant="outlined" color="warning"
+                onClick={() => setRequestChangesOpen(true)} disabled={actionLoading}>
+                Request Changes
+              </Button>
+              <Button size="small" variant="outlined" color="info" startIcon={<EditIcon />}
+                onClick={() => setEditSendOpen(true)} disabled={actionLoading}>
+                Edit & Send Back
+              </Button>
+            </Box>
+          }
+        >
+          <Typography variant="subtitle2">Customer has submitted a revision</Typography>
+          <Typography variant="body2">Review the changes below and take action.</Typography>
+        </Alert>
+      )}
+
       {/* Rejection Reason */}
       {quotation.status === QUOTATION_STATUS.REJECTED && quotation.rejectionReason && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -202,24 +284,61 @@ export default function QuotationDetailPage({ params }) {
         </Alert>
       )}
 
-      {/* Reusable Document Container */}
-      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-        <Box className="print-container" ref={docWrapperRef} sx={{ width: '100%', maxWidth: 1400 }}>
-          <Box sx={{ width: A4_WIDTH * scale, height: A4_HEIGHT * scale, position: 'relative', overflow: 'hidden', mx: 'auto' }}>
-            <Box className="quotation-doc-scaler" sx={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: A4_WIDTH, position: 'absolute', top: 0, left: 0 }}>
-              <QuotationDocument
-                business={business}
-                customer={customer}
-                quotation={quotation}
-                settings={settings}
-                scale={1}
-                printMode={false}
-              />
+      {/* Revision Requested Info */}
+      {quotation.status === QUOTATION_STATUS.REVISION_REQUESTED && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="subtitle2">Changes Requested</Typography>
+          <Typography variant="body2">You have requested changes. Waiting for the customer to submit a revision.</Typography>
+        </Alert>
+      )}
+
+      {/* Tabs */}
+      <Box className="no-print" sx={{ mb: 2 }}>
+        <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
+          <Tab label="Quotation" />
+          <Tab label="Changes" />
+          <Tab label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><HistoryIcon sx={{ fontSize: 18 }} /> History</Box>} />
+        </Tabs>
+      </Box>
+
+      {/* Tab Content */}
+      {activeTab === 0 && (
+        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <Box className="print-container" ref={docWrapperRef} sx={{ width: '100%', maxWidth: 1400 }}>
+            <Box sx={{ width: A4_WIDTH * scale, height: A4_HEIGHT * scale, position: 'relative', overflow: 'hidden', mx: 'auto' }}>
+              <Box className="quotation-doc-scaler" sx={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: A4_WIDTH, position: 'absolute', top: 0, left: 0 }}>
+                <QuotationDocument
+                  business={business}
+                  customer={customer}
+                  quotation={quotation}
+                  settings={settings}
+                  scale={1}
+                  printMode={false}
+                />
+              </Box>
             </Box>
           </Box>
         </Box>
-      </Box>
+      )}
 
+      {activeTab === 1 && (
+        <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+          <RevisionDiffView quotationId={id} refreshKey={revisionRefreshKey} />
+          {quotation.revision === 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>
+              No changes to display yet.
+            </Typography>
+          )}
+        </Box>
+      )}
+
+      {activeTab === 2 && (
+        <Box sx={{ maxWidth: 700, mx: 'auto' }}>
+          <RevisionTimeline quotationId={id} refreshKey={revisionRefreshKey} />
+        </Box>
+      )}
+
+      {/* Confirm Dialogs */}
       {confirmAction && (
         <ConfirmDialog
           open={!!confirmAction}
@@ -231,6 +350,84 @@ export default function QuotationDetailPage({ params }) {
           onCancel={() => setConfirmAction(null)}
         />
       )}
+
+      {/* Reject Dialog */}
+      <Dialog open={rejectDialogOpen} onClose={() => { setRejectDialogOpen(false); setRejectReason(''); }} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 600 }}>Reject Revision</DialogTitle>
+        <DialogContent sx={{ pb: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Please provide a reason for rejecting the customer&apos;s revision.
+          </Typography>
+          <TextField
+            autoFocus
+            multiline
+            rows={3}
+            fullWidth
+            label="Rejection Reason *"
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="Enter the reason for rejection..."
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+          <Button onClick={() => { setRejectDialogOpen(false); setRejectReason(''); }} color="inherit">Cancel</Button>
+          <Button onClick={() => handleBusinessAction('reject', { rejectionReason: rejectReason.trim() })} color="error" variant="contained" disabled={!rejectReason.trim() || actionLoading}>
+            {actionLoading ? 'Rejecting...' : 'Reject'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Request Changes Dialog */}
+      <Dialog open={requestChangesOpen} onClose={() => { setRequestChangesOpen(false); setRequestChangesRemarks(''); }} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 600 }}>Request Changes</DialogTitle>
+        <DialogContent sx={{ pb: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Provide feedback or instructions for the customer.
+          </Typography>
+          <TextField
+            autoFocus
+            multiline
+            rows={3}
+            fullWidth
+            label="Remarks *"
+            value={requestChangesRemarks}
+            onChange={(e) => setRequestChangesRemarks(e.target.value)}
+            placeholder="What changes are needed..."
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+          <Button onClick={() => { setRequestChangesOpen(false); setRequestChangesRemarks(''); }} color="inherit">Cancel</Button>
+          <Button onClick={() => handleBusinessAction('request_changes', { remarks: requestChangesRemarks.trim() })} color="warning" variant="contained" disabled={!requestChangesRemarks.trim() || actionLoading}>
+            {actionLoading ? 'Sending...' : 'Send Request'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit & Send Back Dialog */}
+      <Dialog open={editSendOpen} onClose={() => { setEditSendOpen(false); setEditSendRemarks(''); }} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 600 }}>Edit & Send Back</DialogTitle>
+        <DialogContent sx={{ pb: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Add any notes before sending the updated quotation back to the customer.
+          </Typography>
+          <TextField
+            autoFocus
+            multiline
+            rows={3}
+            fullWidth
+            label="Notes"
+            value={editSendRemarks}
+            onChange={(e) => setEditSendRemarks(e.target.value)}
+            placeholder="Optional notes..."
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3, gap: 1.5 }}>
+          <Button onClick={() => { setEditSendOpen(false); setEditSendRemarks(''); }} color="inherit">Cancel</Button>
+          <Button onClick={() => handleBusinessAction('edit_and_send', { remarks: editSendRemarks.trim() })} color="info" variant="contained" disabled={actionLoading}>
+            {actionLoading ? 'Sending...' : 'Send to Customer'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

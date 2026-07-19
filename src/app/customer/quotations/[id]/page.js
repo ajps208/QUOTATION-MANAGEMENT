@@ -4,11 +4,14 @@ import { useRouter } from 'next/navigation';
 import {
   Box, Typography, Button, IconButton, Alert,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField,
+  Tabs, Tab,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import PrintIcon from '@mui/icons-material/Print';
+import EditIcon from '@mui/icons-material/Edit';
+import HistoryIcon from '@mui/icons-material/History';
 
 import { quotationService } from '@/services/quotationService';
 import { customerService } from '@/services/customerService';
@@ -20,6 +23,8 @@ import { formatDate } from '@/utils/formatters';
 import StatusChip from '@/components/common/StatusChip';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import QuotationDocument from '@/components/quotation/QuotationDocument';
+import CustomerEditPanel from '@/components/quotation/CustomerEditPanel';
+import RevisionTimeline from '@/components/quotation/RevisionTimeline';
 
 const A4_WIDTH = 794;
 const A4_HEIGHT = 1123;
@@ -63,6 +68,10 @@ export default function CustomerQuotationDetailPage({ params }) {
   const [confirmAction, setConfirmAction] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState(0);
+  const [revisionRefreshKey, setRevisionRefreshKey] = useState(0);
   const initRef = useRef(null);
 
   const fetchData = async () => {
@@ -71,8 +80,15 @@ export default function CustomerQuotationDetailPage({ params }) {
       const quot = await quotationService.getQuotationById(id, user?.id);
       setQuotation(quot);
 
-      if (quot.status !== QUOTATION_STATUS.SENT) {
-        showError('Quotation details are only available when the quotation has been sent.');
+      const viewableStatuses = [
+        QUOTATION_STATUS.SENT,
+        QUOTATION_STATUS.CUSTOMER_EDITING,
+        QUOTATION_STATUS.PENDING_BUSINESS_APPROVAL,
+        QUOTATION_STATUS.REVISION_REQUESTED,
+        QUOTATION_STATUS.APPROVED,
+      ];
+      if (!viewableStatuses.includes(quot.status)) {
+        showError('Quotation details are not available in the current status.');
         router.push('/customer/quotations');
         return;
       }
@@ -121,11 +137,31 @@ export default function CustomerQuotationDetailPage({ params }) {
     handleStatusChange(QUOTATION_STATUS.REJECTED, rejectReason.trim());
   };
 
+  const handleEditSave = async (payload) => {
+    try {
+      setSaving(true);
+      await quotationService.submitRevision(id, {
+        userId: user?.id,
+        ...payload,
+      });
+      showSuccess('Revision submitted for business approval');
+      setEditMode(false);
+      setRevisionRefreshKey(prev => prev + 1);
+      fetchData();
+    } catch (err) {
+      showError(err.message || 'Failed to submit revision');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const canEdit = [QUOTATION_STATUS.SENT, QUOTATION_STATUS.REVISION_REQUESTED].includes(quotation?.status);
+  const canRespond = [QUOTATION_STATUS.SENT, QUOTATION_STATUS.VIEWED, QUOTATION_STATUS.REVISED].includes(quotation?.status);
+  const isPendingApproval = quotation?.status === QUOTATION_STATUS.PENDING_BUSINESS_APPROVAL;
+  const settings = quotation?.settings || null;
+
   if (loading) return <Typography sx={{ mt: 4 }}>Loading quotation...</Typography>;
   if (!quotation || !business || !customer) return null;
-
-  const canRespond = [QUOTATION_STATUS.SENT, QUOTATION_STATUS.VIEWED, QUOTATION_STATUS.REVISED].includes(quotation.status);
-  const settings = quotation.settings || null;
 
   return (
     <Box>
@@ -139,12 +175,26 @@ export default function CustomerQuotationDetailPage({ params }) {
           <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
             From <strong>{business?.name}</strong> • {formatDate(quotation.quotationDate)} • Valid until {formatDate(quotation.expiryDate)}
           </Typography>
+          {quotation.revision > 0 && (
+            <Typography variant="caption" color="text.secondary">Revision {quotation.revision}</Typography>
+          )}
         </Box>
         <StatusChip status={quotation.status} />
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
           <Button startIcon={<PrintIcon />} onClick={() => window.print()} variant="outlined" size="small" sx={{ display: { xs: 'none', sm: 'flex' } }}>
             Print / PDF
           </Button>
+          {canEdit && !editMode && (
+            <Button
+              variant="contained"
+              color="warning"
+              startIcon={<EditIcon />}
+              onClick={() => setEditMode(true)}
+              sx={{ flex: { xs: 1, sm: 'none' } }}
+            >
+              Edit Quotation
+            </Button>
+          )}
           {canRespond && (
             <>
               <Button
@@ -181,6 +231,14 @@ export default function CustomerQuotationDetailPage({ params }) {
         </Box>
       </Box>
 
+      {/* Pending Approval Alert */}
+      {isPendingApproval && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="subtitle2">Revision Submitted</Typography>
+          <Typography variant="body2">Your revision has been sent to the business for approval. You will be notified once they respond.</Typography>
+        </Alert>
+      )}
+
       {/* Rejection Reason */}
       {quotation.status === QUOTATION_STATUS.REJECTED && quotation.rejectionReason && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -189,23 +247,57 @@ export default function CustomerQuotationDetailPage({ params }) {
         </Alert>
       )}
 
-      {/* Quotation Document */}
-      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-        <Box className="print-container" ref={docWrapperRef} sx={{ width: '100%', maxWidth: 1400 }}>
-          <Box sx={{ width: A4_WIDTH * scale, height: A4_HEIGHT * scale, position: 'relative', overflow: 'hidden', mx: 'auto' }}>
-            <Box className="quotation-doc-scaler" sx={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: A4_WIDTH, position: 'absolute', top: 0, left: 0 }}>
-              <QuotationDocument
-                business={business}
-                customer={customer}
-                quotation={quotation}
-                settings={settings}
-                scale={1}
-                printMode={false}
-              />
-            </Box>
-          </Box>
-        </Box>
+      {/* Edit Mode */}
+      {editMode && (
+        <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setEditMode(false)}>
+          You are editing this quotation. Changes will be submitted for business approval.
+        </Alert>
+      )}
+
+      {/* Tabs */}
+      <Box className="no-print" sx={{ mb: 2 }}>
+        <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
+          <Tab label="Quotation" />
+          <Tab label={<Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}><HistoryIcon sx={{ fontSize: 18 }} /> History</Box>} />
+        </Tabs>
       </Box>
+
+      {/* Tab Content */}
+      {activeTab === 0 && (
+        <>
+          {editMode ? (
+            <CustomerEditPanel
+              quotation={quotation}
+              onSave={handleEditSave}
+              onCancel={() => setEditMode(false)}
+              saving={saving}
+            />
+          ) : (
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Box className="print-container" ref={docWrapperRef} sx={{ width: '100%', maxWidth: 1400 }}>
+                <Box sx={{ width: A4_WIDTH * scale, height: A4_HEIGHT * scale, position: 'relative', overflow: 'hidden', mx: 'auto' }}>
+                  <Box className="quotation-doc-scaler" sx={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: A4_WIDTH, position: 'absolute', top: 0, left: 0 }}>
+                    <QuotationDocument
+                      business={business}
+                      customer={customer}
+                      quotation={quotation}
+                      settings={settings}
+                      scale={1}
+                      printMode={false}
+                    />
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+          )}
+        </>
+      )}
+
+      {activeTab === 1 && (
+        <Box sx={{ maxWidth: 700, mx: 'auto' }}>
+          <RevisionTimeline quotationId={id} refreshKey={revisionRefreshKey} />
+        </Box>
+      )}
 
       {/* Accept Confirmation Dialog */}
       {confirmAction && (

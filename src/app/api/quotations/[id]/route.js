@@ -31,7 +31,7 @@ export async function GET(request, { params }) {
     const userId = searchParams.get('userId');
 
     const quotation = await Quotation.findById(id)
-      .select('quotationNumber businessId customerId requestId quotationDate expiryDate currency items overallDiscount specialDiscounts additionalCharges paymentTerms terms businessNotes customerNotes status rejectionReason revision settings createdAt updatedAt')
+      .select('quotationNumber businessId customerId requestId quotationDate expiryDate currency items overallDiscount specialDiscounts additionalCharges paymentTerms terms businessNotes customerNotes status rejectionReason revision allowedCustomerEdit settings createdAt updatedAt')
       .lean({ virtuals: false });
 
     if (!quotation) return Response.json({ error: 'Quotation not found' }, { status: 404 });
@@ -46,8 +46,15 @@ export async function GET(request, { params }) {
         if (!customerIds.includes(quotation.customerId.toString())) {
           return Response.json({ error: 'Quotation not found' }, { status: 404 });
         }
-        if (quotation.status !== QUOTATION_STATUS.SENT) {
-          return Response.json({ error: 'Quotation details are only available for sent quotations' }, { status: 403 });
+        const customerViewableStatuses = [
+          QUOTATION_STATUS.SENT,
+          QUOTATION_STATUS.CUSTOMER_EDITING,
+          QUOTATION_STATUS.PENDING_BUSINESS_APPROVAL,
+          QUOTATION_STATUS.REVISION_REQUESTED,
+          QUOTATION_STATUS.APPROVED,
+        ];
+        if (!customerViewableStatuses.includes(quotation.status)) {
+          return Response.json({ error: 'Quotation details are not available in the current status' }, { status: 403 });
         }
       }
     }
