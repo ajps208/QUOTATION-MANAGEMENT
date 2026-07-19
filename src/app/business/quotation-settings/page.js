@@ -25,11 +25,15 @@ import { businessService } from "@/services/businessService";
 import { quotationSettingsService } from "@/services/quotationSettingsService";
 import { useSnackbar } from "@/hooks/useSnackbar";
 import QuotationDocument from "@/components/quotation/QuotationDocument";
+import SignatureUploader from "@/components/quotation/SignatureUploader";
 import FormField from "@/components/common/FormField";
 import FormSection from "@/components/common/FormSection";
 import AppButton from "@/components/common/AppButton";
 
 const A4_WIDTH = 794;
+const PREVIEW_WIDTH = 360;
+const PREVIEW_SCALE = PREVIEW_WIDTH / A4_WIDTH;
+
 const SAMPLE_QUOTATION = {
   quotationNumber: 'PREVIEW-001',
   quotationDate: new Date().toISOString(),
@@ -192,6 +196,7 @@ export default function QuotationSettingsPage() {
         <Tab label="Branding" />
         <Tab label="Layout" />
         <Tab label="Content" />
+        <Tab label="Signatures" />
       </Tabs>
 
       {/* Settings Content */}
@@ -394,6 +399,31 @@ export default function QuotationSettingsPage() {
           </Box>
         )}
 
+        {/* Signatures Tab */}
+        {activeTab === 3 && (
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3, maxWidth: 600, mx: "auto" }}>
+            <FormSection title="Signatures" description="Manage signature images used in your quotation documents">
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={settings.showSignature}
+                    onChange={(e) => handleChange("showSignature", e.target.checked)}
+                  />
+                }
+                label="Show Signature on Documents"
+              />
+              {settings.showSignature && (
+                <Box sx={{ mt: 3 }}>
+                  <SignatureUploader
+                    signatures={settings.signatures || []}
+                    onChange={(sigs) => handleChange("signatures", sigs)}
+                  />
+                </Box>
+              )}
+            </FormSection>
+          </Box>
+        )}
+
         {/* Live Preview */}
         <Box sx={{ mt: 3, display: "flex", justifyContent: "center" }}>
           <Box
@@ -412,7 +442,7 @@ export default function QuotationSettingsPage() {
               sx={{
                 position: "absolute",
                 inset: 0,
-                transform: `scale(${100 / 100}%)`,
+                transform: `scale(${PREVIEW_SCALE})`,
                 transformOrigin: "top left",
                 width: A4_WIDTH,
               }}

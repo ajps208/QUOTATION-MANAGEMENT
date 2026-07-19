@@ -1,8 +1,9 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Box, Grid, Typography, Avatar, InputAdornment, Divider } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import BusinessIcon from '@mui/icons-material/Business';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 
 import { useAuthStore } from '@/store/useAuthStore';
 import { businessService } from '@/services/businessService';
@@ -12,9 +13,12 @@ import FormField from '@/components/common/FormField';
 import AppButton from '@/components/common/AppButton';
 import { useSnackbar } from '@/hooks/useSnackbar';
 
+const MAX_LOGO_SIZE = 3 * 1024 * 1024;
+
 export default function BusinessSettingsPage() {
   const { user } = useAuthStore();
   const { showSuccess, showError } = useSnackbar();
+  const logoInputRef = useRef(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -31,7 +35,7 @@ export default function BusinessSettingsPage() {
     paymentTerms: '',
     description: '',
   });
-  
+  const [logo, setLogo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -55,6 +59,7 @@ export default function BusinessSettingsPage() {
           paymentTerms: biz.paymentTerms || '',
           description: biz.description || '',
         });
+        setLogo(biz.logo || null);
       } catch (err) {
         showError('Failed to load business profile');
       } finally {
@@ -63,6 +68,33 @@ export default function BusinessSettingsPage() {
     };
     fetchBusiness();
   }, [user]);
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > MAX_LOGO_SIZE) {
+      showError('Logo must be smaller than 3MB');
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      showError('Only image files are allowed');
+      return;
+    }
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsDataURL(file);
+      });
+      await businessService.updateBusiness(user.businessId, { logo: dataUrl });
+      setLogo(dataUrl);
+      showSuccess('Logo uploaded successfully');
+    } catch (err) {
+      showError('Failed to upload logo');
+    }
+    if (logoInputRef.current) logoInputRef.current.value = '';
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -98,6 +130,7 @@ export default function BusinessSettingsPage() {
           <FormSection>
             <Box sx={{ textAlign: 'center', py: 1 }}>
               <Avatar
+                src={logo || undefined}
                 sx={{
                   width: 96,
                   height: 96,
@@ -107,9 +140,10 @@ export default function BusinessSettingsPage() {
                   color: 'primary.main',
                   fontSize: '2.5rem',
                   boxShadow: '0 4px 12px rgba(79,70,229,0.15)',
+                  objectFit: 'contain',
                 }}
               >
-                <BusinessIcon sx={{ fontSize: 44 }} />
+                {!logo && <BusinessIcon sx={{ fontSize: 44 }} />}
               </Avatar>
               <Typography variant="h6" fontWeight={600} sx={{ letterSpacing: '-0.01em' }}>
                 {formData.name || 'Your Business'}
@@ -120,10 +154,19 @@ export default function BusinessSettingsPage() {
               <AppButton
                 variant="outlined"
                 size="small"
+                startIcon={<UploadFileIcon />}
                 sx={{ mt: 2.5 }}
+                onClick={() => logoInputRef.current?.click()}
               >
-                Upload Logo
+                {logo ? 'Change Logo' : 'Upload Logo'}
               </AppButton>
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                hidden
+                onChange={handleLogoUpload}
+              />
             </Box>
           </FormSection>
           

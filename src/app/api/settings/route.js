@@ -30,6 +30,7 @@ const DEFAULT_SETTINGS = {
   defaultTerms: 'Valid for 30 days.',
   quotationPrefix: 'QT',
   dateFormat: 'DD MMM YYYY',
+  signatures: [],
 };
 
 function serialize(doc) {
@@ -69,9 +70,10 @@ export async function POST(request) {
     const { businessId, ...rest } = data;
     if (!businessId) return Response.json({ error: 'businessId required' }, { status: 400 });
 
+    const { id, _id, createdAt, updatedAt, __v, ...updateData } = rest;
     const settings = await QuotationSetting.findOneAndUpdate(
       { businessId },
-      { ...rest },
+      { $set: updateData },
       { new: true, upsert: true }
     );
     return Response.json(serialize(settings));

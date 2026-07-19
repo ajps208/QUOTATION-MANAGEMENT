@@ -2,7 +2,6 @@
 import { Box, Typography, Divider } from '@mui/material';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { calculateQuotationTotals } from '@/utils/quotationCalculations';
-import { DISCOUNT_TYPE } from '@/constants/discountTypes';
 
 /**
  * QuotationDocument — Reusable A4-style quotation renderer.
@@ -336,7 +335,15 @@ export default function QuotationDocument({ business, customer, quotation, setti
         {cfg.showSignature && (
           <Box style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24 }}>
             <Box style={{ textAlign: 'center', minWidth: 200 }}>
-              <Box style={{ borderBottom: `1px solid #94a3b8`, marginBottom: 6, height: 48 }} />
+              {cfg.signatures && cfg.signatures.length > 0 && cfg.signatures[0].dataUrl ? (
+                <img
+                  src={cfg.signatures[0].dataUrl}
+                  alt={cfg.signatures[0].label || 'Signature'}
+                  style={{ maxHeight: 64, maxWidth: 200, objectFit: 'contain', marginBottom: 6, display: 'block', marginLeft: 'auto' }}
+                />
+              ) : (
+                <Box style={{ borderBottom: `1px solid #94a3b8`, marginBottom: 6, height: 48 }} />
+              )}
               <Typography style={{ fontFamily, fontSize: 11, color: '#475569' }}>Authorised Signature</Typography>
               <Typography style={{ fontFamily, fontSize: 11, fontWeight: 600, color: '#334155' }}>{business.name}</Typography>
             </Box>

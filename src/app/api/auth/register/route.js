@@ -65,6 +65,7 @@ export async function POST(request) {
         defaultTerms: 'Valid for 30 days.',
         quotationPrefix: 'QT',
         dateFormat: 'DD MMM YYYY',
+        signatures: [],
       });
     }
 

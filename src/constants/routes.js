@@ -12,7 +12,7 @@ export const ROUTES = {
     CUSTOMERS: '/business/customers',
     QUOTATION_REQUESTS: '/business/quotation-requests',
     QUOTATIONS: '/business/quotations',
-    TEMPLATES: '/business/quotation-templates',
+    TEMPLATES: '/business/templates',
     NOTIFICATIONS: '/business/notifications',
     SETTINGS: '/business/settings',
     PROFILE: '/business/profile',

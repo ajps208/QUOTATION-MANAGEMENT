@@ -29,7 +29,8 @@ const quotationSettingSchema = new mongoose.Schema({
   bankDetails: { type: String },
   defaultTerms: { type: String },
   quotationPrefix: { type: String },
-  dateFormat: { type: String }
+  dateFormat: { type: String },
+  signatures: { type: [{ id: String, label: String, type: String, dataUrl: String }], default: [] }
 }, { timestamps: true });
 
 export default mongoose.models.QuotationSetting || mongoose.model('QuotationSetting', quotationSettingSchema);
