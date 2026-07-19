@@ -26,17 +26,17 @@ export default function QuotationTotals({ totals, currency = 'INR' }) {
   return (
     <Box>
       {rows.map((row, i) => (
-        <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1.5 }}>
-          <Typography variant="body2" color="text.secondary">{row.label}</Typography>
-          <Typography variant="body2" fontWeight={500} color={row.color || 'text.primary'}>
+        <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1.5, gap: 2 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ minWidth: 0 }}>{row.label}</Typography>
+          <Typography variant="body2" fontWeight={500} color={row.color || 'text.primary'} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
             {row.value < 0 ? `- ${formatCurrency(Math.abs(row.value))}` : formatCurrency(row.value)}
           </Typography>
         </Box>
       ))}
       <Divider sx={{ my: 2 }} />
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
         <Typography variant="subtitle1" fontWeight={700}>Grand Total</Typography>
-        <Typography variant="h6" fontWeight={700} color="primary.main">
+        <Typography variant="h6" fontWeight={700} color="primary.main" sx={{ whiteSpace: 'nowrap' }}>
           {formatCurrency(grandTotal)}
         </Typography>
       </Box>

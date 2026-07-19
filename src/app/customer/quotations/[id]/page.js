@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef, use } from 'react';
+import { useState, useEffect, useRef, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box, Typography, Button, IconButton, Alert,
@@ -21,12 +21,40 @@ import StatusChip from '@/components/common/StatusChip';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import QuotationDocument from '@/components/quotation/QuotationDocument';
 
+const A4_WIDTH = 794;
+const A4_HEIGHT = 1123;
+
+function useResponsiveScale(containerRef) {
+  const [scale, setScale] = useState(1);
+
+  const calculateScale = useCallback(() => {
+    if (!containerRef.current) return;
+    const containerWidth = containerRef.current.offsetWidth;
+    if (containerWidth <= 0) return;
+    const newScale = Math.min(1, containerWidth / A4_WIDTH);
+    setScale(newScale);
+  }, [containerRef]);
+
+  useEffect(() => {
+    calculateScale();
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => calculateScale());
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [calculateScale, containerRef]);
+
+  return scale;
+}
+
 export default function CustomerQuotationDetailPage({ params }) {
   const router = useRouter();
   const resolvedParams = use(params);
   const { id } = resolvedParams;
   const { user } = useAuthStore();
   const { showSuccess, showError } = useSnackbar();
+  const docWrapperRef = useRef(null);
+  const scale = useResponsiveScale(docWrapperRef);
 
   const [quotation, setQuotation] = useState(null);
   const [customer, setCustomer] = useState(null);
@@ -102,51 +130,55 @@ export default function CustomerQuotationDetailPage({ params }) {
   return (
     <Box>
       {/* Header */}
-      <Box className="no-print" sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 4, flexWrap: 'wrap' }}>
+      <Box className="no-print" sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 1.5, sm: 2 }, mb: { xs: 3, md: 4 }, flexWrap: 'wrap' }}>
         <IconButton onClick={() => router.push('/customer/quotations')} sx={{ bgcolor: 'background.paper', flexShrink: 0 }}>
           <ArrowBackIcon />
         </IconButton>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>{quotation.quotationNumber}</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
             From <strong>{business?.name}</strong> • {formatDate(quotation.quotationDate)} • Valid until {formatDate(quotation.expiryDate)}
           </Typography>
         </Box>
         <StatusChip status={quotation.status} />
-        <Button startIcon={<PrintIcon />} onClick={() => window.print()} variant="outlined" size="small" sx={{ display: { xs: 'none', sm: 'flex' } }}>
-          Print / PDF
-        </Button>
-        {canRespond && (
-          <>
-            <Button
-              variant="outlined"
-              color="error"
-              startIcon={<CancelIcon />}
-              onClick={() => setRejectDialogOpen(true)}
-            >
-              Reject
-            </Button>
-            <Button
-              variant="contained"
-              color="success"
-              startIcon={<CheckCircleIcon />}
-              onClick={() => setConfirmAction({
-                title: 'Accept Quotation',
-                message: `You are accepting ${quotation.quotationNumber}. This confirms your intent to proceed.`,
-                status: QUOTATION_STATUS.ACCEPTED,
-                color: 'success'
-              })}
-            >
-              Accept
-            </Button>
-          </>
-        )}
-        {quotation.status === QUOTATION_STATUS.ACCEPTED && (
-          <Typography variant="body2" color="success.main" fontWeight={600}>You accepted this quotation.</Typography>
-        )}
-        {quotation.status === QUOTATION_STATUS.REJECTED && (
-          <Typography variant="body2" color="error.main" fontWeight={600}>You rejected this quotation.</Typography>
-        )}
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
+          <Button startIcon={<PrintIcon />} onClick={() => window.print()} variant="outlined" size="small" sx={{ display: { xs: 'none', sm: 'flex' } }}>
+            Print / PDF
+          </Button>
+          {canRespond && (
+            <>
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<CancelIcon />}
+                onClick={() => setRejectDialogOpen(true)}
+                sx={{ flex: { xs: 1, sm: 'none' } }}
+              >
+                Reject
+              </Button>
+              <Button
+                variant="contained"
+                color="success"
+                startIcon={<CheckCircleIcon />}
+                onClick={() => setConfirmAction({
+                  title: 'Accept Quotation',
+                  message: `You are accepting ${quotation.quotationNumber}. This confirms your intent to proceed.`,
+                  status: QUOTATION_STATUS.ACCEPTED,
+                  color: 'success'
+                })}
+                sx={{ flex: { xs: 1, sm: 'none' } }}
+              >
+                Accept
+              </Button>
+            </>
+          )}
+          {quotation.status === QUOTATION_STATUS.ACCEPTED && (
+            <Typography variant="body2" color="success.main" fontWeight={600}>You accepted this quotation.</Typography>
+          )}
+          {quotation.status === QUOTATION_STATUS.REJECTED && (
+            <Typography variant="body2" color="error.main" fontWeight={600}>You rejected this quotation.</Typography>
+          )}
+        </Box>
       </Box>
 
       {/* Rejection Reason */}
@@ -159,15 +191,19 @@ export default function CustomerQuotationDetailPage({ params }) {
 
       {/* Quotation Document */}
       <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-        <Box className="print-container">
-          <QuotationDocument
-            business={business}
-            customer={customer}
-            quotation={quotation}
-            settings={settings}
-            scale={1}
-            printMode={false}
-          />
+        <Box className="print-container" ref={docWrapperRef} sx={{ width: '100%', maxWidth: 1400 }}>
+          <Box sx={{ width: A4_WIDTH * scale, height: A4_HEIGHT * scale, position: 'relative', overflow: 'hidden', mx: 'auto' }}>
+            <Box className="quotation-doc-scaler" sx={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: A4_WIDTH, position: 'absolute', top: 0, left: 0 }}>
+              <QuotationDocument
+                business={business}
+                customer={customer}
+                quotation={quotation}
+                settings={settings}
+                scale={1}
+                printMode={false}
+              />
+            </Box>
+          </Box>
         </Box>
       </Box>
 

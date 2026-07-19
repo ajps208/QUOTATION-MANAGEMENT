@@ -1,5 +1,5 @@
 'use client';
-import { Box, Typography, Divider } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { calculateQuotationTotals } from '@/utils/quotationCalculations';
 
@@ -23,17 +23,8 @@ function autoFlattenBusiness(biz) {
   return biz;
 }
 
-/**
- * QuotationDocument — Reusable A4-style quotation renderer.
- *
- * Props:
- *   business     — flat or nested business object (auto-detected)
- *   customer     — object with name, companyName, billingAddress, city, email, taxNumber
- *   quotation    — quotation object with items, overallDiscount, terms, etc.
- *   settings     — quotationSettings object controlling layout, colors, visibility
- *   scale        — number (default 1). Used to scale the doc for preview thumbnails.
- *   printMode    — boolean. When true, removes shadows and renders for print/PDF.
- */
+const A4_WIDTH = 794;
+
 export default function QuotationDocument({ business, customer, quotation, settings, scale = 1, printMode = false }) {
   const flatBusiness = autoFlattenBusiness(business);
   if (!flatBusiness || !customer || !quotation) return null;
@@ -42,7 +33,7 @@ export default function QuotationDocument({ business, customer, quotation, setti
   const primaryColor = cfg.primaryColor || '#4f46e5';
   const accentColor = cfg.accentColor || '#0ea5e9';
   const fontFamily = cfg.fontFamily || 'Inter, sans-serif';
-  const headerLayout = cfg.headerLayout || 'logo-left'; // logo-left | centered | logo-right
+  const headerLayout = cfg.headerLayout || 'logo-left';
   const tableStyle = cfg.tableStyle || 'striped';
   const footerText = cfg.footerText || 'Thank you for your business!';
   const quotationTitle = cfg.quotationTitle || 'QUOTATION';
@@ -58,18 +49,19 @@ export default function QuotationDocument({ business, customer, quotation, setti
   const tableRowAlt = tableStyle === 'striped' ? '#f8fafc' : 'transparent';
   const tableBorder = tableStyle === 'bordered' ? `1px solid #e2e8f0` : 'none';
 
-  // Business info block
   const BusinessInfo = () => (
-    <Box>
+    <Box className="qd-business-info">
       {cfg.showLogo !== false && flatBusiness.logo && (
         <img
           src={flatBusiness.logo}
           alt={flatBusiness.name}
+          className="qd-logo"
           style={{
             height: cfg.logoSize === 'sm' ? 40 : cfg.logoSize === 'lg' ? 80 : 56,
             objectFit: 'contain',
             marginBottom: 8,
             display: 'block',
+            maxWidth: '100%',
           }}
         />
       )}
@@ -79,7 +71,7 @@ export default function QuotationDocument({ business, customer, quotation, setti
             {flatBusiness.name}
           </Typography>
           {flatBusiness.address && (
-            <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.5, marginTop: 2 }}>
+            <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.5, marginTop: 2, wordBreak: 'break-word' }}>
               {flatBusiness.address}
             </Typography>
           )}
@@ -89,7 +81,7 @@ export default function QuotationDocument({ business, customer, quotation, setti
             </Typography>
           )}
           {flatBusiness.email && (
-            <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.5 }}>
+            <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.5, wordBreak: 'break-word' }}>
               {flatBusiness.email}
             </Typography>
           )}
@@ -103,9 +95,8 @@ export default function QuotationDocument({ business, customer, quotation, setti
     </Box>
   );
 
-  // Quotation meta block
   const QuotationMeta = () => (
-    <Box style={{ textAlign: headerLayout === 'logo-right' ? 'left' : 'right' }}>
+    <Box className="qd-meta" style={{ textAlign: headerLayout === 'logo-right' ? 'left' : 'right' }}>
       <Typography style={{ fontFamily, fontWeight: 700, fontSize: 26, color: primaryColor, letterSpacing: '0.04em', lineHeight: 1.2 }}>
         {quotationTitle}
       </Typography>
@@ -127,19 +118,18 @@ export default function QuotationDocument({ business, customer, quotation, setti
     </Box>
   );
 
-  // Render header based on layout style
   const renderHeader = () => {
     if (headerLayout === 'centered') {
       return (
-        <Box style={{ backgroundColor: primaryColor, padding: '24px 40px', textAlign: 'center' }}>
+        <Box className="qd-header qd-header--centered" style={{ backgroundColor: primaryColor, padding: '24px 40px', textAlign: 'center' }}>
             {flatBusiness.logo && cfg.showLogo !== false && (
-              <img src={flatBusiness.logo} alt={flatBusiness.name} style={{ height: 60, objectFit: 'contain', marginBottom: 12, display: 'inline-block' }} />
+              <img src={flatBusiness.logo} alt={flatBusiness.name} className="qd-logo" style={{ height: 60, objectFit: 'contain', marginBottom: 12, display: 'inline-block', maxWidth: '100%' }} />
             )}
             <Typography style={{ fontFamily, fontWeight: 700, fontSize: 26, color: '#ffffff', letterSpacing: '0.08em' }}>
               {quotationTitle}
             </Typography>
             {cfg.showBusinessInfo !== false && (
-              <Typography style={{ fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 4 }}>
+              <Typography style={{ fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 4, wordBreak: 'break-word' }}>
                 {flatBusiness.name} • {flatBusiness.email}
               </Typography>
             )}
@@ -149,16 +139,15 @@ export default function QuotationDocument({ business, customer, quotation, setti
 
     if (headerLayout === 'logo-right') {
       return (
-        <Box style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '32px 40px', borderBottom: `3px solid ${primaryColor}` }}>
+        <Box className="qd-header qd-header--logo-right" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '32px 40px', borderBottom: `3px solid ${primaryColor}` }}>
           <QuotationMeta />
           <BusinessInfo />
         </Box>
       );
     }
 
-    // Default: logo-left
     return (
-      <Box style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '32px 40px', borderBottom: `3px solid ${primaryColor}` }}>
+      <Box className="qd-header qd-header--logo-left" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '32px 40px', borderBottom: `3px solid ${primaryColor}` }}>
         <BusinessInfo />
         <QuotationMeta />
       </Box>
@@ -167,50 +156,48 @@ export default function QuotationDocument({ business, customer, quotation, setti
 
   return (
     <Box
+      className="qd-document"
       style={{
         fontFamily,
         backgroundColor: '#ffffff',
-        width: 794, // A4 width in px at 96dpi
-        minHeight: 1123, // A4 height
+        width: A4_WIDTH,
+        minHeight: 1123,
         transform: `scale(${scale})`,
         transformOrigin: 'top left',
         boxShadow: printMode ? 'none' : '0 4px 24px rgba(0,0,0,0.12)',
         position: 'relative',
       }}
     >
-      {/* ─── HEADER ─── */}
       {renderHeader()}
 
-      <Box style={{ padding: '32px 40px' }}>
-        {/* ─── FROM / TO ─── */}
+      <Box className="qd-body" style={{ padding: '32px 40px' }}>
         {cfg.showCustomerInfo !== false && (
-          <Box style={{ display: 'flex', gap: 32, marginBottom: 32 }}>
-            <Box style={{ flex: 1, backgroundColor: '#f8fafc', borderRadius: 8, padding: '16px 20px', borderLeft: `4px solid ${primaryColor}` }}>
+          <Box className="qd-from-to" style={{ display: 'flex', gap: 32, marginBottom: 32 }}>
+            <Box className="qd-from-to__box" style={{ flex: 1, backgroundColor: '#f8fafc', borderRadius: 8, padding: '16px 20px', borderLeft: `4px solid ${primaryColor}`, minWidth: 0 }}>
               <Typography style={{ fontFamily, fontSize: 10, fontWeight: 700, color: primaryColor, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
                 From
               </Typography>
               <Typography style={{ fontFamily, fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{flatBusiness.name}</Typography>
-              {flatBusiness.address && <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.5 }}>{flatBusiness.address}</Typography>}
+              {flatBusiness.address && <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.5, wordBreak: 'break-word' }}>{flatBusiness.address}</Typography>}
               {(flatBusiness.city || flatBusiness.country) && <Typography style={{ fontFamily, fontSize: 12, color: '#475569' }}>{[flatBusiness.city, flatBusiness.country].filter(Boolean).join(', ')}</Typography>}
-              {flatBusiness.email && <Typography style={{ fontFamily, fontSize: 12, color: '#475569' }}>{flatBusiness.email}</Typography>}
+              {flatBusiness.email && <Typography style={{ fontFamily, fontSize: 12, color: '#475569', wordBreak: 'break-word' }}>{flatBusiness.email}</Typography>}
             </Box>
-            <Box style={{ flex: 1, backgroundColor: '#f8fafc', borderRadius: 8, padding: '16px 20px', borderLeft: `4px solid ${accentColor}` }}>
+            <Box className="qd-from-to__box" style={{ flex: 1, backgroundColor: '#f8fafc', borderRadius: 8, padding: '16px 20px', borderLeft: `4px solid ${accentColor}`, minWidth: 0 }}>
               <Typography style={{ fontFamily, fontSize: 10, fontWeight: 700, color: accentColor, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
                 To
               </Typography>
               <Typography style={{ fontFamily, fontWeight: 700, fontSize: 13, color: '#0f172a' }}>{customer.name}</Typography>
               {customer.companyName && <Typography style={{ fontFamily, fontSize: 12, color: '#475569' }}>{customer.companyName}</Typography>}
-              {customer.billingAddress && <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.5 }}>{customer.billingAddress}</Typography>}
+              {customer.billingAddress && <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.5, wordBreak: 'break-word' }}>{customer.billingAddress}</Typography>}
               {(customer.city || customer.country) && <Typography style={{ fontFamily, fontSize: 12, color: '#475569' }}>{[customer.city, customer.country].filter(Boolean).join(', ')}</Typography>}
-              {customer.email && <Typography style={{ fontFamily, fontSize: 12, color: '#475569' }}>{customer.email}</Typography>}
+              {customer.email && <Typography style={{ fontFamily, fontSize: 12, color: '#475569', wordBreak: 'break-word' }}>{customer.email}</Typography>}
               {customer.taxNumber && <Typography style={{ fontFamily, fontSize: 12, color: '#475569' }}>GSTIN: {customer.taxNumber}</Typography>}
             </Box>
           </Box>
         )}
 
-        {/* ─── ITEMS TABLE ─── */}
-        <Box style={{ marginBottom: 24 }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', border: tableBorder }}>
+        <Box className="qd-table-wrap" style={{ marginBottom: 24, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table className="qd-table" style={{ width: '100%', borderCollapse: 'collapse', border: tableBorder, minWidth: 480 }}>
             <thead>
               <tr style={{ backgroundColor: tableHeaderBg }}>
                 {['#', 'Item / Description', 'Qty', 'Unit Price',
@@ -238,23 +225,23 @@ export default function QuotationDocument({ business, customer, quotation, setti
               {totals.lineItems.map((item, i) => (
                 <tr key={i} style={{ backgroundColor: tableStyle === 'striped' && i % 2 === 1 ? tableRowAlt : 'transparent', borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '10px 14px', fontSize: 12, color: '#64748b', border: tableBorder }}>{i + 1}</td>
-                  <td style={{ padding: '10px 14px', border: tableBorder }}>
+                  <td style={{ padding: '10px 14px', border: tableBorder, wordBreak: 'break-word' }}>
                     <span style={{ fontFamily, fontSize: 12, fontWeight: 600, color: '#0f172a' }}>{item.name}</span>
                     {item.unit && <span style={{ fontFamily, fontSize: 11, color: '#94a3b8', marginLeft: 6 }}>({item.unit})</span>}
                   </td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily, fontSize: 12, color: '#334155', border: tableBorder }}>{item.quantity}</td>
-                  <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily, fontSize: 12, color: '#334155', border: tableBorder }}>{formatCurrency(item.unitPrice)}</td>
+                  <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily, fontSize: 12, color: '#334155', border: tableBorder, whiteSpace: 'nowrap' }}>{item.quantity}</td>
+                  <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily, fontSize: 12, color: '#334155', border: tableBorder, whiteSpace: 'nowrap' }}>{formatCurrency(item.unitPrice)}</td>
                   {cfg.showDiscounts !== false && (
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily, fontSize: 12, color: item.discount > 0 ? '#10b981' : '#94a3b8', border: tableBorder }}>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily, fontSize: 12, color: item.discount > 0 ? '#10b981' : '#94a3b8', border: tableBorder, whiteSpace: 'nowrap' }}>
                       {item.discount > 0 ? `- ${formatCurrency(item.discount)}` : '—'}
                     </td>
                   )}
                   {cfg.showTax !== false && (
-                    <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily, fontSize: 12, color: '#334155', border: tableBorder }}>
+                    <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily, fontSize: 12, color: '#334155', border: tableBorder, whiteSpace: 'nowrap' }}>
                       {item.taxPercent > 0 ? `${item.taxPercent}%` : '—'}
                     </td>
                   )}
-                  <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily, fontSize: 12, fontWeight: 700, color: '#0f172a', border: tableBorder }}>
+                  <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily, fontSize: 12, fontWeight: 700, color: '#0f172a', border: tableBorder, whiteSpace: 'nowrap' }}>
                     {formatCurrency(item.total)}
                   </td>
                 </tr>
@@ -263,9 +250,8 @@ export default function QuotationDocument({ business, customer, quotation, setti
           </table>
         </Box>
 
-        {/* ─── TOTALS ─── */}
-        <Box style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 32 }}>
-          <Box style={{ minWidth: 280 }}>
+        <Box className="qd-totals" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 32 }}>
+          <Box style={{ minWidth: 280, width: '100%', maxWidth: 360 }}>
             {cfg.showSubtotal !== false && (
               <TotalsRow label="Subtotal" value={formatCurrency(totals.subtotal)} fontFamily={fontFamily} />
             )}
@@ -297,32 +283,29 @@ export default function QuotationDocument({ business, customer, quotation, setti
           </Box>
         </Box>
 
-        {/* ─── SPECIAL DISCOUNTS detail ─── */}
         {cfg.showDiscounts !== false && totals.calculatedSpecialDiscounts?.length > 0 && (
           <Box style={{ backgroundColor: '#f0fdf4', borderRadius: 8, padding: '12px 16px', marginBottom: 24, border: '1px solid #bbf7d0' }}>
             <Typography style={{ fontFamily, fontSize: 11, fontWeight: 700, color: '#166534', marginBottom: 6 }}>Special Discounts Applied</Typography>
             {totals.calculatedSpecialDiscounts.map((d, i) => (
               <Box key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography style={{ fontFamily, fontSize: 11, color: '#166534' }}>{d.name}</Typography>
-                <Typography style={{ fontFamily, fontSize: 11, color: '#166534' }}>- {formatCurrency(d.amount)}</Typography>
+                <Typography style={{ fontFamily, fontSize: 11, color: '#166534', wordBreak: 'break-word', paddingRight: 8 }}>{d.name}</Typography>
+                <Typography style={{ fontFamily, fontSize: 11, color: '#166534', whiteSpace: 'nowrap' }}>- {formatCurrency(d.amount)}</Typography>
               </Box>
             ))}
           </Box>
         )}
 
-        {/* ─── NOTES ─── */}
         {cfg.showNotes !== false && (quotation.customerNotes || quotation.businessNotes) && (
           <Box style={{ marginBottom: 24 }}>
             <Typography style={{ fontFamily, fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
               Notes
             </Typography>
             {quotation.customerNotes && (
-              <Typography style={{ fontFamily, fontSize: 12, color: '#334155', lineHeight: 1.6 }}>{quotation.customerNotes}</Typography>
+              <Typography style={{ fontFamily, fontSize: 12, color: '#334155', lineHeight: 1.6, wordBreak: 'break-word' }}>{quotation.customerNotes}</Typography>
             )}
           </Box>
         )}
 
-        {/* ─── TERMS ─── */}
         {cfg.showTerms !== false && (quotation.paymentTerms || quotation.terms || cfg.defaultTerms) && (
           <Box style={{ marginBottom: 24, backgroundColor: '#f8fafc', borderRadius: 8, padding: '14px 18px', border: '1px solid #e2e8f0' }}>
             <Typography style={{ fontFamily, fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
@@ -331,28 +314,26 @@ export default function QuotationDocument({ business, customer, quotation, setti
             {quotation.paymentTerms && (
               <Box style={{ marginBottom: 6 }}>
                 <Typography style={{ fontFamily, fontSize: 11, fontWeight: 600, color: '#334155' }}>Payment Terms:</Typography>
-                <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.6 }}>{quotation.paymentTerms}</Typography>
+                <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.6, wordBreak: 'break-word' }}>{quotation.paymentTerms}</Typography>
               </Box>
             )}
             {(quotation.terms || cfg.defaultTerms) && (
-              <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.6 }}>
+              <Typography style={{ fontFamily, fontSize: 12, color: '#475569', lineHeight: 1.6, wordBreak: 'break-word' }}>
                 {quotation.terms || cfg.defaultTerms}
               </Typography>
             )}
           </Box>
         )}
 
-        {/* ─── BANK DETAILS ─── */}
         {cfg.showBankDetails && cfg.bankDetails && (
           <Box style={{ marginBottom: 24 }}>
             <Typography style={{ fontFamily, fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>
               Bank Details
             </Typography>
-            <Typography style={{ fontFamily, fontSize: 12, color: '#475569', whiteSpace: 'pre-line', lineHeight: 1.6 }}>{cfg.bankDetails}</Typography>
+            <Typography style={{ fontFamily, fontSize: 12, color: '#475569', whiteSpace: 'pre-line', lineHeight: 1.6, wordBreak: 'break-word' }}>{cfg.bankDetails}</Typography>
           </Box>
         )}
 
-        {/* ─── SIGNATURE ─── */}
         {cfg.showSignature && (
           <Box style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24 }}>
             <Box style={{ textAlign: 'center', minWidth: 200 }}>
@@ -360,6 +341,7 @@ export default function QuotationDocument({ business, customer, quotation, setti
                 <img
                   src={cfg.signatures[0].dataUrl}
                   alt={cfg.signatures[0].label || 'Signature'}
+                  className="qd-signature"
                   style={{ maxHeight: 64, maxWidth: 200, objectFit: 'contain', marginBottom: 6, display: 'block', marginLeft: 'auto' }}
                 />
               ) : (
@@ -372,14 +354,13 @@ export default function QuotationDocument({ business, customer, quotation, setti
         )}
       </Box>
 
-      {/* ─── FOOTER ─── */}
       {cfg.showFooter !== false && (
-        <Box style={{ backgroundColor: primaryColor, padding: '14px 40px', textAlign: 'center', position: 'relative', marginTop: 'auto' }}>
+        <Box className="qd-footer" style={{ backgroundColor: primaryColor, padding: '14px 40px', textAlign: 'center', position: 'relative', marginTop: 'auto' }}>
           <Typography style={{ fontFamily, fontSize: 12, color: 'rgba(255,255,255,0.9)', fontStyle: 'italic' }}>
             {footerText}
           </Typography>
           {flatBusiness.website && (
-            <Typography style={{ fontFamily, fontSize: 11, color: 'rgba(255,255,255,0.65)', marginTop: 2 }}>
+            <Typography style={{ fontFamily, fontSize: 11, color: 'rgba(255,255,255,0.65)', marginTop: 2, wordBreak: 'break-word' }}>
               {flatBusiness.website}
             </Typography>
           )}
@@ -389,14 +370,13 @@ export default function QuotationDocument({ business, customer, quotation, setti
   );
 }
 
-// Helper for totals rows
 function TotalsRow({ label, value, fontFamily, bold, color, large }) {
   return (
     <Box style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 6 }}>
       <Typography style={{ fontFamily, fontSize: large ? 14 : 12, fontWeight: bold ? 700 : 500, color: color || '#475569' }}>
         {label}
       </Typography>
-      <Typography style={{ fontFamily, fontSize: large ? 16 : 12, fontWeight: bold ? 700 : 500, color: color || '#0f172a' }}>
+      <Typography style={{ fontFamily, fontSize: large ? 16 : 12, fontWeight: bold ? 700 : 500, color: color || '#0f172a', whiteSpace: 'nowrap' }}>
         {value}
       </Typography>
     </Box>

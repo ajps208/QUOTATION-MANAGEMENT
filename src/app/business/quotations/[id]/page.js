@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box, Typography, Button, IconButton, Alert
@@ -23,12 +23,43 @@ import StatusChip from '@/components/common/StatusChip';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import QuotationDocument from '@/components/quotation/QuotationDocument';
 
+const A4_WIDTH = 794;
+const A4_HEIGHT = 1123;
+
+function useResponsiveScale(containerRef) {
+  const [scale, setScale] = useState(1);
+
+  const calculateScale = useCallback(() => {
+    if (!containerRef.current) return;
+    const containerWidth = containerRef.current.offsetWidth;
+    if (containerWidth <= 0) return;
+    const newScale = Math.min(1, containerWidth / A4_WIDTH);
+    setScale(newScale);
+  }, [containerRef]);
+
+  useEffect(() => {
+    calculateScale();
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver(() => {
+      calculateScale();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [calculateScale, containerRef]);
+
+  return scale;
+}
+
 export default function QuotationDetailPage({ params }) {
   const router = useRouter();
   const resolvedParams = use(params);
   const { id } = resolvedParams;
   const { user } = useAuthStore();
   const { showSuccess, showError } = useSnackbar();
+  const docWrapperRef = useRef(null);
+  const scale = useResponsiveScale(docWrapperRef);
 
   const [quotation, setQuotation] = useState(null);
   const [customer, setCustomer] = useState(null);
@@ -108,56 +139,59 @@ export default function QuotationDetailPage({ params }) {
   return (
     <Box>
       {/* Header - Hidden during print */}
-      <Box className="no-print" sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: 4, flexWrap: 'wrap' }}>
+      <Box className="no-print" sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 1.5, sm: 2 }, mb: { xs: 3, md: 4 }, flexWrap: 'wrap' }}>
         <IconButton onClick={() => router.push('/business/quotations')} sx={{ bgcolor: 'background.paper', flexShrink: 0 }}>
           <ArrowBackIcon />
         </IconButton>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="h5" fontWeight={700} sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>{quotation.quotationNumber}</Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
             Created {formatDate(quotation.createdAt)} • Expires {formatDate(quotation.expiryDate)}
           </Typography>
         </Box>
         <StatusChip status={quotation.status} />
-        <Button startIcon={<PrintIcon />} onClick={handlePrint} variant="outlined" size="small" sx={{ display: { xs: 'none', sm: 'flex' } }}>
-          Print / PDF
-        </Button>
-        {canSend && (
-          <Button
-            variant="contained"
-            startIcon={<SendIcon />}
-            onClick={() => setConfirmAction({
-              title: 'Send Quotation',
-              message: 'This will mark the quotation as Sent and notify the customer.',
-              status: QUOTATION_STATUS.SENT,
-            })}
-          >
-            Send to Customer
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', width: { xs: '100%', sm: 'auto' } }}>
+          <Button startIcon={<PrintIcon />} onClick={handlePrint} variant="outlined" size="small" sx={{ display: { xs: 'none', sm: 'flex' } }}>
+            Print / PDF
           </Button>
-        )}
-        <Button
-          variant="outlined"
-          color="success"
-          startIcon={<WhatsAppIcon />}
-          onClick={handleWhatsApp}
-          size="small"
-        >
-          WhatsApp
-        </Button>
-        {canCancel && quotation.status !== QUOTATION_STATUS.DRAFT && (
+          {canSend && (
+            <Button
+              variant="contained"
+              startIcon={<SendIcon />}
+              onClick={() => setConfirmAction({
+                title: 'Send Quotation',
+                message: 'This will mark the quotation as Sent and notify the customer.',
+                status: QUOTATION_STATUS.SENT,
+              })}
+              sx={{ flex: { xs: 1, sm: 'none' } }}
+            >
+              Send to Customer
+            </Button>
+          )}
           <Button
             variant="outlined"
-            color="error"
-            startIcon={<CancelIcon />}
-            onClick={() => setConfirmAction({
-              title: 'Cancel Quotation',
-              message: 'Are you sure you want to cancel this quotation?',
-              status: QUOTATION_STATUS.CANCELLED,
-            })}
+            color="success"
+            startIcon={<WhatsAppIcon />}
+            onClick={handleWhatsApp}
+            size="small"
           >
-            Cancel
+            WhatsApp
           </Button>
-        )}
+          {canCancel && quotation.status !== QUOTATION_STATUS.DRAFT && (
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<CancelIcon />}
+              onClick={() => setConfirmAction({
+                title: 'Cancel Quotation',
+                message: 'Are you sure you want to cancel this quotation?',
+                status: QUOTATION_STATUS.CANCELLED,
+              })}
+            >
+              Cancel
+            </Button>
+          )}
+        </Box>
       </Box>
 
       {/* Rejection Reason */}
@@ -170,15 +204,19 @@ export default function QuotationDetailPage({ params }) {
 
       {/* Reusable Document Container */}
       <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-        <Box className="print-container">
-          <QuotationDocument
-            business={business}
-            customer={customer}
-            quotation={quotation}
-            settings={settings}
-            scale={1}
-            printMode={false} // Will be styled via CSS media queries for actual print
-          />
+        <Box className="print-container" ref={docWrapperRef} sx={{ width: '100%', maxWidth: 1400 }}>
+          <Box sx={{ width: A4_WIDTH * scale, height: A4_HEIGHT * scale, position: 'relative', overflow: 'hidden', mx: 'auto' }}>
+            <Box className="quotation-doc-scaler" sx={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: A4_WIDTH, position: 'absolute', top: 0, left: 0 }}>
+              <QuotationDocument
+                business={business}
+                customer={customer}
+                quotation={quotation}
+                settings={settings}
+                scale={1}
+                printMode={false}
+              />
+            </Box>
+          </Box>
         </Box>
       </Box>
 

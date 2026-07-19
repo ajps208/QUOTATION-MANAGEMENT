@@ -42,7 +42,7 @@ export default function LineItemRow({ item, index, products, onUpdate, onRemove 
 
   return (
     <Box sx={{
-      p: { xs: 2.5, md: 3 },
+      p: { xs: 2, sm: 2.5, md: 3 },
       bgcolor: '#F8FAFC',
       borderRadius: 2,
       mb: 2.5,
@@ -55,7 +55,7 @@ export default function LineItemRow({ item, index, products, onUpdate, onRemove 
         boxShadow: '0 2px 8px rgba(79,70,229,0.06)',
       },
     }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5, gap: 1 }}>
         <Typography
           variant="caption"
           fontWeight={600}
@@ -72,6 +72,7 @@ export default function LineItemRow({ item, index, products, onUpdate, onRemove 
             sx={{
               width: 32,
               height: 32,
+              flexShrink: 0,
               '&:hover': { bgcolor: 'error.light', color: 'error.dark' },
             }}
           >
@@ -117,6 +118,7 @@ export default function LineItemRow({ item, index, products, onUpdate, onRemove 
           <Box sx={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
             height: 44,
             px: 1.5,
             bgcolor: 'white',
@@ -124,10 +126,10 @@ export default function LineItemRow({ item, index, products, onUpdate, onRemove 
             border: '1px solid',
             borderColor: '#E2E8F0',
           }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mr: 1, fontSize: '0.8125rem' }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mr: 1, fontSize: '0.8125rem', flexShrink: 0 }}>
               Total:
             </Typography>
-            <Typography variant="subtitle2" fontWeight={700} color="primary.main">
+            <Typography variant="subtitle2" fontWeight={700} color="primary.main" sx={{ whiteSpace: 'nowrap' }}>
               {formatCurrency(lineTotal)}
             </Typography>
           </Box>

@@ -386,3 +386,87 @@ p, li {
 .text-pretty {
   text-wrap: pretty;
 }
+
+/* ─── Quotation Document Responsive ─── */
+
+.quotation-doc-scaler {
+  display: inline-block;
+  transform-origin: top left;
+}
+
+.qd-document {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.qd-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+.qd-table {
+  table-layout: auto;
+}
+
+.qd-from-to {
+  min-width: 0;
+}
+
+.qd-from-to__box {
+  overflow: hidden;
+  min-width: 0;
+}
+
+.qd-logo {
+  max-width: 100%;
+  height: auto;
+}
+
+.qd-signature {
+  max-width: 100%;
+  height: auto;
+}
+
+.qd-body {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* Print styles - keep A4 intact */
+@media print {
+  .quotation-doc-scaler {
+    transform: none !important;
+  }
+
+  .qd-document {
+    width: 794px !important;
+    min-height: 1123px !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .qd-header {
+    padding-left: 40px !important;
+    padding-right: 40px !important;
+  }
+
+  .qd-body {
+    padding: 32px 40px !important;
+  }
+
+  .qd-footer {
+    padding-left: 40px !important;
+    padding-right: 40px !important;
+  }
+
+  .qd-from-to {
+    flex-direction: row !important;
+    gap: 32px !important;
+  }
+
+  .qd-from-to__box {
+    flex: 1 !important;
+    width: auto !important;
+  }
+}

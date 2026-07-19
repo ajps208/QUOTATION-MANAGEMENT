@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, Suspense, useRef } from 'react';
+import { useState, useEffect, useMemo, Suspense, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Box, Grid, Typography, Button,
@@ -38,6 +38,35 @@ import FormGrid from '@/components/common/FormGrid';
 import AppButton from '@/components/common/AppButton';
 import CustomerDialog from '@/app/business/customers/components/CustomerDialog';
 
+const A4_WIDTH = 794;
+const A4_HEIGHT = 1123;
+
+function useResponsiveScale(containerRef) {
+  const [scale, setScale] = useState(1);
+
+  const calculateScale = useCallback(() => {
+    if (!containerRef.current) return;
+    const containerWidth = containerRef.current.offsetWidth;
+    if (containerWidth <= 0) return;
+    const newScale = Math.min(1, containerWidth / A4_WIDTH);
+    setScale(newScale);
+  }, [containerRef]);
+
+  useEffect(() => {
+    calculateScale();
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver(() => {
+      calculateScale();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [calculateScale, containerRef]);
+
+  return scale;
+}
+
 const emptyItem = () => ({
   productId: '',
   name: '',
@@ -53,6 +82,8 @@ function QuotationBuilderInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestId = searchParams.get('requestId');
+  const previewWrapperRef = useRef(null);
+  const previewScale = useResponsiveScale(previewWrapperRef);
 
   const { user } = useAuthStore();
   const { showSuccess, showError } = useSnackbar();
@@ -249,7 +280,7 @@ function QuotationBuilderInner() {
 
       {!loading && !loadError && (<>
       {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2, mb: { xs: 3, md: 4 }, flexWrap: 'wrap' }}>
+      <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 1.5, sm: 2 }, mb: { xs: 3, md: 4 }, flexWrap: 'wrap' }}>
         <IconButton
           onClick={() => router.back()}
           sx={{ bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', flexShrink: 0 }}
@@ -261,18 +292,18 @@ function QuotationBuilderInner() {
             New Quotation
           </Typography>
           {sourceRequest && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, wordBreak: 'break-word' }}>
               Based on request: <strong>{sourceRequest.id}</strong>
             </Typography>
           )}
         </Box>
-        <Box sx={{ display: 'flex', gap: 1.5, width: { xs: '100%', sm: 'auto' } }}>
+        <Box sx={{ display: 'flex', gap: 1, width: { xs: '100%', sm: 'auto' }, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
           <AppButton
             variant="outlined"
             startIcon={<SaveIcon />}
             onClick={() => handleSave(QUOTATION_STATUS.DRAFT)}
             disabled={saving}
-            sx={{ flex: { xs: 1, sm: 'none' } }}
+            sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: 'none' }, minWidth: 0 }}
           >
             Save Draft
           </AppButton>
@@ -282,9 +313,9 @@ function QuotationBuilderInner() {
             onClick={() => handleSave(QUOTATION_STATUS.SENT)}
             disabled={saving}
             loading={saving}
-            sx={{ flex: { xs: 1, sm: 'none' } }}
+            sx={{ flex: { xs: '1 1 calc(50% - 4px)', sm: 'none' }, minWidth: 0 }}
           >
-            {saving ? 'Saving...' : 'Send to Customer'}
+            {saving ? 'Saving...' : 'Send'}
           </AppButton>
         </Box>
       </Box>
@@ -600,26 +631,30 @@ function QuotationBuilderInner() {
               <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ bgcolor: '#F8FAFC' }}>
                 <Typography variant="h6" fontWeight={600}>Live Document Preview</Typography>
               </AccordionSummary>
-              <AccordionDetails sx={{ bgcolor: '#F1F5F9', p: { xs: 2, md: 4 }, display: 'flex', justifyContent: 'center', overflowX: 'auto' }}>
-                <Box sx={{ minWidth: 0 }}>
-                  <QuotationDocument
-                    business={business}
-                    customer={customers.find(c => c.id === customerId) || {}}
-                    quotation={{
-                      quotationNumber: 'DRAFT',
-                      quotationDate,
-                      expiryDate,
-                      items,
-                      overallDiscount,
-                      specialDiscounts,
-                      additionalCharges,
-                      paymentTerms,
-                      terms,
-                      customerNotes,
-                      businessNotes,
-                    }}
-                    settings={settings}
-                  />
+              <AccordionDetails sx={{ bgcolor: '#F1F5F9', p: { xs: 1.5, sm: 2, md: 4 }, display: 'flex', justifyContent: 'center', overflowX: 'hidden' }}>
+                <Box ref={previewWrapperRef} sx={{ width: '100%', maxWidth: A4_WIDTH }}>
+                  <Box sx={{ width: A4_WIDTH * previewScale, height: A4_HEIGHT * previewScale, position: 'relative', overflow: 'hidden', mx: 'auto' }}>
+                    <Box className="quotation-doc-scaler" sx={{ transform: `scale(${previewScale})`, transformOrigin: 'top left', width: A4_WIDTH, position: 'absolute', top: 0, left: 0 }}>
+                      <QuotationDocument
+                        business={business}
+                        customer={customers.find(c => c.id === customerId) || {}}
+                        quotation={{
+                          quotationNumber: 'DRAFT',
+                          quotationDate,
+                          expiryDate,
+                          items,
+                          overallDiscount,
+                          specialDiscounts,
+                          additionalCharges,
+                          paymentTerms,
+                          terms,
+                          customerNotes,
+                          businessNotes,
+                        }}
+                        settings={settings}
+                      />
+                    </Box>
+                  </Box>
                 </Box>
               </AccordionDetails>
             </Accordion>
