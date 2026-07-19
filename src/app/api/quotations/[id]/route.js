@@ -75,19 +75,20 @@ export async function PUT(request, { params }) {
     if (!quotation) return Response.json({ error: 'Quotation not found' }, { status: 404 });
 
     if (data.status && prevQuotation?.status !== data.status) {
-      const customer = await Customer.findById(quotation.customerId).select('email name companyName').lean({ virtuals: false });
-      if (customer) {
-        if (data.status === QUOTATION_STATUS.ACCEPTED) {
-          const businessUser = await User.findOne({ businessId: quotation.businessId }).select('_id').lean({ virtuals: false });
-          if (businessUser) {
-            await Notification.create({
-              userId: businessUser._id,
-              title: 'Quotation Accepted',
-              message: `${customer.companyName || customer.name} has accepted your quotation (${quotation.quotationNumber}).`,
-              link: `/business/quotations/${id}`,
-            });
-          }
-        } else if (data.status === QUOTATION_STATUS.SENT) {
+      if (data.status === QUOTATION_STATUS.ACCEPTED) {
+        const businessUser = await User.findOne({ businessId: quotation.businessId }).select('_id').lean({ virtuals: false });
+        if (businessUser) {
+          const customer = await Customer.findById(quotation.customerId).select('name companyName').lean({ virtuals: false });
+          await Notification.create({
+            userId: businessUser._id,
+            title: 'Quotation Accepted',
+            message: `${customer?.companyName || customer?.name || 'Customer'} has accepted your quotation (${quotation.quotationNumber}).`,
+            link: `/business/quotations/${id}`,
+          });
+        }
+      } else if (data.status === QUOTATION_STATUS.SENT) {
+        const customer = await Customer.findById(quotation.customerId).select('email name companyName').lean({ virtuals: false });
+        if (customer?.email) {
           const customerUser = await User.findOne({ email: customer.email }).select('_id').lean({ virtuals: false });
           if (customerUser) {
             const business = await Business.findById(quotation.businessId).select('profile.businessName').lean({ virtuals: false });

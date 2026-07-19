@@ -21,6 +21,7 @@ import { TableLoader } from '@/components/common/LoadingState';
 import StatusChip from '@/components/common/StatusChip';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { usePagination } from '@/hooks/usePagination';
+import { useDebounce } from '@/hooks/useDebounce';
 import CategoryDialog from './components/CategoryDialog';
 import { formatDate } from '@/utils/formatters';
 
@@ -44,6 +45,7 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [sortBy, setSortBy] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   
@@ -68,7 +70,7 @@ export default function CategoriesPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.businessId, showError]);
+  }, [user, showError]);
 
   useEffect(() => {
     fetchCategories();
@@ -76,7 +78,7 @@ export default function CategoriesPage() {
 
   const filteredCategories = useMemo(() => {
     let result = categories.filter(c => 
-      c.name.toLowerCase().includes(search.toLowerCase())
+      c.name.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
 
     if (statusFilter) {
@@ -96,7 +98,7 @@ export default function CategoriesPage() {
     }
 
     return result;
-  }, [categories, search, statusFilter, sortBy]);
+  }, [categories, debouncedSearch, statusFilter, sortBy]);
 
   const { page, rowsPerPage, totalCount, paginatedData, handleChangePage, handleChangeRowsPerPage, setData } = usePagination([]);
 
@@ -124,8 +126,8 @@ export default function CategoriesPage() {
     setDeleting(true);
     try {
       await categoryService.deleteCategory(categoryToDelete.id);
+      setCategories(prev => prev.filter(c => c.id !== categoryToDelete.id));
       showSuccess('Category deleted successfully');
-      fetchCategories();
     } catch (err) {
       showError('Failed to delete category');
     } finally {
@@ -139,13 +141,14 @@ export default function CategoriesPage() {
     setSaving(true);
     try {
       if (selectedCategory) {
-        await categoryService.updateCategory(selectedCategory.id, formData);
+        const updated = await categoryService.updateCategory(selectedCategory.id, formData);
+        setCategories(prev => prev.map(c => c.id === selectedCategory.id ? updated : c));
         showSuccess('Category updated successfully');
       } else {
-        await categoryService.createCategory({ ...formData, businessId: user.businessId });
+        const created = await categoryService.createCategory({ ...formData, businessId: user.businessId });
+        setCategories(prev => [created, ...prev]);
         showSuccess('Category created successfully');
       }
-      fetchCategories();
       setDialogOpen(false);
     } catch (err) {
       showError('Failed to save category');

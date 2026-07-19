@@ -1,26 +1,31 @@
 'use client';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { IconButton, Badge, Menu, MenuItem, Typography, Box, Divider } from '@mui/material';
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 import CircleIcon from '@mui/icons-material/Circle';
 import { useNotificationStore } from '@/store/useNotificationStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useRouter } from 'next/navigation';
 
 export default function NotificationBell() {
   const router = useRouter();
-  const { notifications, unreadCount, markAsRead } = useNotificationStore();
+  const { user } = useAuthStore();
+  const { notifications, unreadCount, markAsRead, fetchNotifications } = useNotificationStore();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
 
-  const handleClick = (event) => {
+  const handleClick = useCallback((event) => {
     setAnchorEl(event.currentTarget);
-  };
+    if (notifications.length === 0 && user?.id) {
+      fetchNotifications(user.id);
+    }
+  }, [notifications.length, user, fetchNotifications]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setAnchorEl(null);
-  };
+  }, []);
 
-  const handleNotificationClick = (notification) => {
+  const handleNotificationClick = useCallback((notification) => {
     if (!notification.read) {
       markAsRead(notification.id);
     }
@@ -28,7 +33,7 @@ export default function NotificationBell() {
     if (notification.link) {
       router.push(notification.link);
     }
-  };
+  }, [markAsRead, handleClose, router]);
 
   return (
     <>
@@ -88,7 +93,7 @@ export default function NotificationBell() {
             </Typography>
           </Box>
         ) : (
-          notifications.map((notif) => (
+          notifications.slice(0, 20).map((notif) => (
             <MenuItem
               key={notif.id}
               onClick={() => handleNotificationClick(notif)}

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Box, Grid, Typography, Card, CardContent, Button } from '@mui/material';
 import DescriptionIcon from '@mui/icons-material/Description';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -22,36 +22,36 @@ export default function CustomerDashboard() {
     vendors: 0,
   });
 
+  const fetchDashboardData = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const [quotations, businesses] = await Promise.all([
+        quotationService.getQuotationsByUser(user.id),
+        businessService.getBusinesses(),
+      ]);
+
+      const active = quotations.filter(q => 
+        [QUOTATION_STATUS.SENT, QUOTATION_STATUS.VIEWED, QUOTATION_STATUS.REVISED].includes(q.status)
+      ).length;
+      
+      const accepted = quotations.filter(q => q.status === QUOTATION_STATUS.ACCEPTED).length;
+
+      const uniqueVendors = new Set(quotations.map(q => q.businessId)).size;
+
+      setStats({
+        activeQuotations: active,
+        acceptedQuotations: accepted,
+        vendors: uniqueVendors || 1,
+      });
+
+    } catch (error) {
+      console.error("Failed to fetch customer dashboard data:", error);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!user?.id) return;
-      try {
-        const [quotations, businesses] = await Promise.all([
-          quotationService.getQuotationsByUser(user.id),
-          businessService.getBusinesses(),
-        ]);
-
-        const active = quotations.filter(q => 
-          [QUOTATION_STATUS.SENT, QUOTATION_STATUS.VIEWED, QUOTATION_STATUS.REVISED].includes(q.status)
-        ).length;
-        
-        const accepted = quotations.filter(q => q.status === QUOTATION_STATUS.ACCEPTED).length;
-
-        const uniqueVendors = new Set(quotations.map(q => q.businessId)).size;
-
-        setStats({
-          activeQuotations: active,
-          acceptedQuotations: accepted,
-          vendors: uniqueVendors || 1,
-        });
-
-      } catch (error) {
-        console.error("Failed to fetch customer dashboard data:", error);
-      }
-    };
-
     fetchDashboardData();
-  }, [user]);
+  }, [fetchDashboardData]);
 
   if (!user) return null;
 

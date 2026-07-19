@@ -21,6 +21,7 @@ import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { TableLoader } from '@/components/common/LoadingState';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { usePagination } from '@/hooks/usePagination';
+import { useDebounce } from '@/hooks/useDebounce';
 import CustomerDialog from './components/CustomerDialog';
 
 const SORT_OPTIONS = [
@@ -37,6 +38,7 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [sortBy, setSortBy] = useState('');
   const [error, setError] = useState(null);
   
@@ -61,7 +63,7 @@ export default function CustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.businessId, showError]);
+  }, [user, showError]);
 
   useEffect(() => {
     fetchCustomers();
@@ -69,9 +71,9 @@ export default function CustomersPage() {
 
   const filteredCustomers = useMemo(() => {
     let result = customers.filter(c => 
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.companyName?.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase())
+      c.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      c.companyName?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      c.email.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
 
     if (sortBy) {
@@ -87,7 +89,7 @@ export default function CustomersPage() {
     }
 
     return result;
-  }, [customers, search, sortBy]);
+  }, [customers, debouncedSearch, sortBy]);
 
   const { page, rowsPerPage, totalCount, paginatedData, handleChangePage, handleChangeRowsPerPage, setData } = usePagination([]);
 
@@ -115,8 +117,8 @@ export default function CustomersPage() {
     setDeleting(true);
     try {
       await customerService.deleteCustomer(customerToDelete.id);
+      setCustomers(prev => prev.filter(c => c.id !== customerToDelete.id));
       showSuccess('Customer deleted successfully');
-      fetchCustomers();
     } catch (err) {
       showError('Failed to delete customer');
     } finally {
@@ -130,13 +132,14 @@ export default function CustomersPage() {
     setSaving(true);
     try {
       if (selectedCustomer) {
-        await customerService.updateCustomer(selectedCustomer.id, formData);
+        const updated = await customerService.updateCustomer(selectedCustomer.id, formData);
+        setCustomers(prev => prev.map(c => c.id === selectedCustomer.id ? updated : c));
         showSuccess('Customer updated successfully');
       } else {
-        await customerService.createCustomer({ ...formData, businessId: user.businessId });
+        const created = await customerService.createCustomer({ ...formData, businessId: user.businessId });
+        setCustomers(prev => [created, ...prev]);
         showSuccess('Customer created successfully');
       }
-      fetchCustomers();
       setDialogOpen(false);
     } catch (err) {
       showError('Failed to save customer');

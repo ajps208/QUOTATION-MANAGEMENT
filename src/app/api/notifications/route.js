@@ -9,7 +9,14 @@ export async function GET(request) {
     await connectToDatabase();
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
+    const onlyCount = searchParams.get('count');
     const query = userId ? { userId } : {};
+
+    if (onlyCount === 'true' && userId) {
+      const unreadCount = await Notification.countDocuments({ userId, read: false });
+      return Response.json({ unreadCount });
+    }
+
     const notifications = await Notification.find(query).select('userId title message read link createdAt').sort({ createdAt: -1 }).limit(50).lean({ virtuals: false });
     return Response.json(notifications.map(toNotification));
   } catch (err) {

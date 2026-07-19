@@ -28,7 +28,9 @@ export const notificationService = {
   },
 
   async getUnreadCount(userId) {
-    const notifications = await this.getNotifications(userId);
-    return notifications.filter(n => !n.read).length;
+    const res = await fetch(`/api/notifications?userId=${userId}&count=true`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch unread count');
+    return data.unreadCount || 0;
   },
 };

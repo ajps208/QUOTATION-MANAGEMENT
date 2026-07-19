@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Chip } from '@mui/material';
 import {
   QUOTATION_STATUS,
@@ -40,7 +41,7 @@ const getStatusColor = (status) => {
   }
 };
 
-export default function StatusChip({ status, label, ...props }) {
+function StatusChip({ status, label, ...props }) {
   const displayLabel = label || status;
   const color = getStatusColor(status);
 
@@ -54,3 +55,5 @@ export default function StatusChip({ status, label, ...props }) {
     />
   );
 }
+
+export default memo(StatusChip);

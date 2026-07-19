@@ -1,4 +1,5 @@
 'use client';
+import { memo } from 'react';
 import { Box, Typography } from '@mui/material';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 
@@ -23,7 +24,7 @@ function getColor(name) {
   return COLORS[Math.abs(hash) % COLORS.length];
 }
 
-export default function ProductAvatar({ image, name, size = 40, sx = {}, icon: IconComponent }) {
+function ProductAvatar({ image, name, size = 40, sx = {}, icon: IconComponent }) {
   const Icon = IconComponent || Inventory2OutlinedIcon;
 
   if (image) {
@@ -32,6 +33,7 @@ export default function ProductAvatar({ image, name, size = 40, sx = {}, icon: I
         component="img"
         src={image}
         alt={name || 'Product'}
+        loading="lazy"
         sx={{
           width: size,
           height: size,
@@ -78,3 +80,5 @@ export default function ProductAvatar({ image, name, size = 40, sx = {}, icon: I
     </Box>
   );
 }
+
+export default memo(ProductAvatar);

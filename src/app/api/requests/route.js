@@ -65,14 +65,13 @@ export async function POST(request) {
     if (data.customerId) {
       const user = await User.findById(data.customerId).lean({ virtuals: false });
       if (user) {
-        const CustomerModel = (await import('@/models/Customer')).default;
-        let crmCustomer = await CustomerModel.findOne({
+        let crmCustomer = await Customer.findOne({
           businessId: data.businessId,
           email: user.email
         }).lean({ virtuals: false });
 
         if (!crmCustomer) {
-          crmCustomer = await CustomerModel.create({
+          crmCustomer = await Customer.create({
             businessId: data.businessId,
             name: user.name,
             email: user.email,
@@ -85,12 +84,11 @@ export async function POST(request) {
       }
     }
 
-    const req = await QuotationRequest.create({
-      ...data,
-      resolvedCustomerId
-    });
+    const [req, businessUser] = await Promise.all([
+      QuotationRequest.create({ ...data, resolvedCustomerId }),
+      User.findOne({ businessId: data.businessId }).select('_id').lean({ virtuals: false }),
+    ]);
 
-    const businessUser = await User.findOne({ businessId: data.businessId }).select('_id').lean({ virtuals: false });
     if (businessUser) {
       await Notification.create({
         userId: businessUser._id,

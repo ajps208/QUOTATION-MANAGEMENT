@@ -21,6 +21,15 @@ export const useNotificationStore = create((set, get) => ({
     }
   },
 
+  fetchUnreadCount: async (userId) => {
+    try {
+      const unreadCount = await notificationService.getUnreadCount(userId);
+      set({ unreadCount });
+    } catch (error) {
+      console.error('Failed to fetch unread count:', error);
+    }
+  },
+
   markAsRead: async (id) => {
     try {
       await notificationService.markAsRead(id);

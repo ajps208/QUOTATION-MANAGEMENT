@@ -18,6 +18,7 @@ import EmptyState from '@/components/common/EmptyState';
 import { ErrorState } from '@/components/common/ErrorState';
 import { TableLoader } from '@/components/common/LoadingState';
 import { useSnackbar } from '@/hooks/useSnackbar';
+import { useDebounce } from '@/hooks/useDebounce';
 import { QUOTATION_STATUS } from '@/constants/statuses';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { calculateQuotationTotals } from '@/utils/quotationCalculations';
@@ -56,6 +57,7 @@ export default function CustomerQuotationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState('');
 
   const fetchData = useCallback(async () => {
@@ -85,12 +87,12 @@ export default function CustomerQuotationsPage() {
 
   const filtered = useMemo(() => {
     return quotations.filter(q => {
-      const matchSearch = q.quotationNumber.toLowerCase().includes(search.toLowerCase()) ||
-        businesses[q.businessId]?.name?.toLowerCase().includes(search.toLowerCase());
+      const matchSearch = q.quotationNumber.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        businesses[q.businessId]?.name?.toLowerCase().includes(debouncedSearch.toLowerCase());
       const matchStatus = statusFilter === '' || q.status === statusFilter;
       return matchSearch && matchStatus;
     });
-  }, [quotations, search, statusFilter, businesses]);
+  }, [quotations, debouncedSearch, statusFilter, businesses]);
 
   const statusOptions = useMemo(() =>
     Object.values(QUOTATION_STATUS).map(s => ({ label: s, value: s }))

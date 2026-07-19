@@ -28,6 +28,7 @@ import { ErrorState } from '@/components/common/ErrorState';
 import { SaveButton, DeleteButton } from '@/components/common/AppButton';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { usePagination } from '@/hooks/usePagination';
+import { useDebounce } from '@/hooks/useDebounce';
 import ProductDialog from './components/ProductDialog';
 import { formatCurrency } from '@/utils/formatters';
 
@@ -59,6 +60,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [sortBy, setSortBy] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -89,7 +91,7 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.businessId, showError]);
+  }, [user, showError]);
 
   useEffect(() => {
     fetchData();
@@ -97,8 +99,8 @@ export default function ProductsPage() {
 
   const filteredProducts = useMemo(() => {
     let result = products.filter(p => 
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku?.toLowerCase().includes(search.toLowerCase())
+      p.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      p.sku?.toLowerCase().includes(debouncedSearch.toLowerCase())
     );
 
     if (statusFilter) {
@@ -124,7 +126,7 @@ export default function ProductsPage() {
     }
 
     return result;
-  }, [products, search, statusFilter, typeFilter, sortBy]);
+  }, [products, debouncedSearch, statusFilter, typeFilter, sortBy]);
 
   const { page, rowsPerPage, totalCount, paginatedData, handleChangePage, handleChangeRowsPerPage, setData } = usePagination([]);
 
@@ -157,8 +159,8 @@ export default function ProductsPage() {
     setDeleting(true);
     try {
       await productService.deleteProduct(productToDelete.id);
+      setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
       showSuccess('Product deleted successfully');
-      fetchData();
     } catch (err) {
       showError('Failed to delete product');
     } finally {
@@ -172,13 +174,14 @@ export default function ProductsPage() {
     setSaving(true);
     try {
       if (selectedProduct) {
-        await productService.updateProduct(selectedProduct.id, formData);
+        const updated = await productService.updateProduct(selectedProduct.id, formData);
+        setProducts(prev => prev.map(p => p.id === selectedProduct.id ? updated : p));
         showSuccess('Product updated successfully');
       } else {
-        await productService.createProduct({ ...formData, businessId: user.businessId });
+        const created = await productService.createProduct({ ...formData, businessId: user.businessId });
+        setProducts(prev => [created, ...prev]);
         showSuccess('Product created successfully');
       }
-      fetchData();
       setDialogOpen(false);
     } catch (err) {
       showError('Failed to save product');

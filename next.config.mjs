@@ -17,6 +17,7 @@ const nextConfig = {
       '@mui/material',
       'recharts',
     ],
+    optimizeCss: false,
   },
   async headers() {
     return [

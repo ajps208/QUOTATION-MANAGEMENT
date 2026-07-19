@@ -96,7 +96,7 @@ export async function POST(request) {
 
     if (data.status === QUOTATION_STATUS.SENT) {
       const customer = await Customer.findById(quotation.customerId).select('email name companyName').lean({ virtuals: false });
-      if (customer) {
+      if (customer?.email) {
         const customerUser = await User.findOne({ email: customer.email }).select('_id').lean({ virtuals: false });
         if (customerUser) {
           await Notification.create({

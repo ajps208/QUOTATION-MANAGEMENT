@@ -22,6 +22,7 @@ import AppFilter from '@/components/common/AppFilter';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 import { TableLoader, SkeletonLoader } from '@/components/common/LoadingState';
 import { useSnackbar } from '@/hooks/useSnackbar';
+import { useDebounce } from '@/hooks/useDebounce';
 import { formatDate } from '@/utils/formatters';
 import { REQUEST_STATUS } from '@/constants/statuses';
 import RequestDetailDialog from './components/RequestDetailDialog';
@@ -35,6 +36,7 @@ export default function CustomerRequestsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -108,12 +110,12 @@ export default function CustomerRequestsPage() {
   const filteredRequests = useMemo(() => {
     return requests.filter(r => {
       const customerName = r.customerInfo?.name || '';
-      const matchSearch = customerName.toLowerCase().includes(search.toLowerCase()) ||
-        r.id?.toLowerCase().includes(search.toLowerCase());
+      const matchSearch = customerName.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        r.id?.toLowerCase().includes(debouncedSearch.toLowerCase());
       const matchStatus = statusFilter === '' || r.status === statusFilter;
       return matchSearch && matchStatus;
     });
-  }, [requests, search, statusFilter]);
+  }, [requests, debouncedSearch, statusFilter]);
 
   const statusOptions = useMemo(() => 
     Object.values(REQUEST_STATUS).map(s => ({ label: s, value: s }))

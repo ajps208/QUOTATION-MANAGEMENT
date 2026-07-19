@@ -122,9 +122,12 @@ export async function POST(request, { params }) {
     if (customerNotes !== undefined) updates.customerNotes = customerNotes;
     if (expiryDate !== undefined) updates.expiryDate = expiryDate;
 
-    const updated = await Quotation.findByIdAndUpdate(id, updates, { new: true }).lean({ virtuals: false });
+    const [updated, businessUser, customer] = await Promise.all([
+      Quotation.findByIdAndUpdate(id, updates, { new: true }).lean({ virtuals: false }),
+      User.findOne({ businessId: quotation.businessId }).select('_id').lean({ virtuals: false }),
+      Customer.findById(quotation.customerId).select('email name companyName').lean({ virtuals: false }),
+    ]);
 
-    const businessUser = await User.findOne({ businessId: quotation.businessId }).select('_id').lean({ virtuals: false });
     if (businessUser) {
       await Notification.create({
         userId: businessUser._id,
@@ -134,7 +137,6 @@ export async function POST(request, { params }) {
       });
     }
 
-    const customer = await Customer.findById(quotation.customerId).select('email name companyName').lean({ virtuals: false });
     if (customer) {
       await Activity.create({
         businessId: quotation.businessId,

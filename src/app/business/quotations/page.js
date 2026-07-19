@@ -23,6 +23,7 @@ import { ErrorState } from '@/components/common/ErrorState';
 import { TableLoader } from '@/components/common/LoadingState';
 import { useSnackbar } from '@/hooks/useSnackbar';
 import { usePagination } from '@/hooks/usePagination';
+import { useDebounce } from '@/hooks/useDebounce';
 import { QUOTATION_STATUS } from '@/constants/statuses';
 import { formatCurrency, formatDate } from '@/utils/formatters';
 import { calculateQuotationTotals } from '@/utils/quotationCalculations';
@@ -52,6 +53,7 @@ export default function BusinessQuotationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState('');
   const [sortBy, setSortBy] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -75,7 +77,7 @@ export default function BusinessQuotationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.businessId, showError]);
+  }, [user, showError]);
 
   useEffect(() => {
     fetchData();
@@ -96,8 +98,8 @@ export default function BusinessQuotationsPage() {
 
   const filteredQuotations = useMemo(() => {
     let result = quotations.filter(q => {
-      const matchSearch = q.quotationNumber.toLowerCase().includes(search.toLowerCase()) ||
-        customers[q.customerId]?.name?.toLowerCase().includes(search.toLowerCase());
+      const matchSearch = q.quotationNumber.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        customers[q.customerId]?.name?.toLowerCase().includes(debouncedSearch.toLowerCase());
       const matchStatus = statusFilter === '' || q.status === statusFilter;
       return matchSearch && matchStatus;
     });
@@ -117,7 +119,7 @@ export default function BusinessQuotationsPage() {
     }
 
     return result;
-  }, [quotations, search, statusFilter, sortBy, customers]);
+  }, [quotations, debouncedSearch, statusFilter, sortBy, customers]);
 
   const { page, rowsPerPage, totalCount, paginatedData, handleChangePage, handleChangeRowsPerPage, setData } = usePagination([]);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Toolbar } from '@mui/material';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -14,17 +14,19 @@ const drawerWidth = 260;
 export default function BusinessLayout({ children }) {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
-  const { fetchNotifications } = useNotificationStore();
+  const { fetchUnreadCount } = useNotificationStore();
+  const fetchedRef = useRef(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
     } else if (user?.role !== USER_ROLES.BUSINESS) {
       router.push('/login');
-    } else {
-      fetchNotifications(user.id);
+    } else if (user?.id && fetchedRef.current !== user.id) {
+      fetchedRef.current = user.id;
+      fetchUnreadCount(user.id);
     }
-  }, [isAuthenticated, user, router, fetchNotifications]);
+  }, [isAuthenticated, user, router, fetchUnreadCount]);
 
   if (!isAuthenticated || user?.role !== USER_ROLES.BUSINESS) {
     return null;

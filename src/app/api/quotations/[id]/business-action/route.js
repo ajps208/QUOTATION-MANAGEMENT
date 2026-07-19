@@ -117,10 +117,11 @@ export async function POST(request, { params }) {
       Object.assign(updates, quotationData);
     }
 
-    const updated = await Quotation.findByIdAndUpdate(id, updates, { new: true }).lean({ virtuals: false });
-
-    const customer = await Customer.findById(quotation.customerId).select('email name companyName').lean({ virtuals: false });
-    if (customer) {
+    const [updated, customer] = await Promise.all([
+      Quotation.findByIdAndUpdate(id, updates, { new: true }).lean({ virtuals: false }),
+      Customer.findById(quotation.customerId).select('email name companyName').lean({ virtuals: false }),
+    ]);
+    if (customer?.email) {
       const customerUser = await User.findOne({ email: customer.email }).select('_id').lean({ virtuals: false });
       if (customerUser) {
         await Notification.create({
